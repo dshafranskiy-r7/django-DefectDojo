@@ -133,7 +133,8 @@ id -u
 
 Some users have found value in using debugpy. For comprehensive VS Code debugging setup instructions, see [VSCODE-DEBUGGING.md](VSCODE-DEBUGGING.md).
 
-Quick setup:
+### Docker-based Debugging (All Platforms)
+
 ```bash
 # Set debug environment 
 ./docker/setEnv.sh debug
@@ -143,6 +144,25 @@ docker compose up -d
 
 # Connect VS Code debugger to localhost:5678
 ```
+
+### Native macOS Debugging (Better Performance)
+
+For macOS users who want better debugging performance, you can run Django natively while keeping supporting services in Docker:
+
+```bash
+# Run Django natively on macOS with debugging
+./run-debug-macos.sh
+
+# Connect VS Code debugger to localhost:5678
+# Application available at http://localhost:8000
+```
+
+This approach provides:
+- ✅ Faster debugging performance (no Docker overhead)
+- ✅ Native Python environment integration
+- ✅ Supporting services still run in Docker (PostgreSQL, Redis, etc.)
+
+See [VSCODE-DEBUGGING.md](VSCODE-DEBUGGING.md) for detailed setup instructions for both approaches.
 
 ## Access the application
 Navigate to <http://localhost:8080> where you can log in with username admin.

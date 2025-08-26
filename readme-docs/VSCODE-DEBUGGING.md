@@ -1,11 +1,15 @@
 # VS Code Debugging Setup for DefectDojo
 
-This guide explains how to set up VS Code for debugging DefectDojo's Django Python code using remote debugging with `debugpy`. You'll be able to set breakpoints, step through code, inspect variables, and debug the Django application running inside Docker containers.
+This guide explains how to set up VS Code for debugging DefectDojo's Django Python code using remote debugging with `debugpy`. You can choose between Docker-based debugging or native macOS debugging for optimal performance.
 
 ## Table of Contents
 
 - [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
+- [Debugging Options](#debugging-options)
+  - [Docker-based Debugging](#docker-based-debugging)
+  - [Native macOS Debugging](#native-macos-debugging)
+- [Quick Start - Docker](#quick-start---docker)
+- [Quick Start - macOS Native](#quick-start---macos-native)
 - [Detailed Setup](#detailed-setup)
   - [1. Configure VS Code](#1-configure-vs-code)
   - [2. Start DefectDojo in Debug Mode](#2-start-defectdojo-in-debug-mode)
@@ -23,7 +27,32 @@ Before you begin, ensure you have:
 - [Python extension for VS Code](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
 - DefectDojo repository cloned locally
 
-## Quick Start
+For macOS native debugging, additionally ensure you have:
+- Python 3.x installed (recommended: via Homebrew `brew install python3`)
+- pip3 package manager
+
+## Debugging Options
+
+### Docker-based Debugging
+
+This is the default approach where the entire Django application runs inside Docker containers. This provides:
+- ✅ Consistent environment across different operating systems
+- ✅ No need to install Python dependencies locally
+- ✅ Exact same environment as production
+- ❌ Slightly slower performance due to Docker overhead
+- ❌ More complex setup for some debugging scenarios
+
+### Native macOS Debugging
+
+This approach runs the Django application natively on macOS while keeping supporting services (PostgreSQL, Redis, etc.) in Docker. This provides:
+- ✅ Better debugging performance (no Docker overhead)
+- ✅ Faster code reloading and breakpoint response
+- ✅ Direct access to Python interpreter and debugger
+- ✅ Easier integration with macOS development tools
+- ❌ Requires local Python environment setup
+- ❌ macOS specific (not portable to other operating systems)
+
+## Quick Start - Docker
 
 1. **Setup environment and start in debug mode:**
    ```bash
@@ -47,6 +76,28 @@ Before you begin, ensure you have:
    - The application will start after VS Code connects
    - Navigate to http://localhost:8080 to access DefectDojo
    - Set breakpoints in your Python code and they will be hit
+
+## Quick Start - macOS Native
+
+1. **Run the macOS debug script:**
+   ```bash
+   # Make script executable (one time only)
+   chmod +x run-debug-macos.sh
+   
+   # Start DefectDojo with native debugging
+   ./run-debug-macos.sh
+   ```
+
+2. **Connect VS Code debugger:**
+   - Open DefectDojo project in VS Code
+   - Go to Run and Debug view (Ctrl+Shift+D)
+   - Select "Debug DefectDojo (Native macOS)" configuration
+   - Press F5 or click the green play button
+
+3. **Start debugging:**
+   - The application will be available at http://localhost:8000
+   - Set breakpoints in your Python code and they will be hit
+   - Enjoy faster debugging performance!
 
 ## Detailed Setup
 
@@ -72,6 +123,23 @@ Create the `.vscode` directory in your project root if it doesn't exist, then cr
                 {
                     "localRoot": "${workspaceFolder}",
                     "remoteRoot": "/app"
+                }
+            ],
+            "justMyCode": false,
+            "django": true,
+            "redirectOutput": true,
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Debug DefectDojo (Native macOS)",
+            "type": "python",
+            "request": "attach",
+            "port": 5678,
+            "host": "localhost",
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "."
                 }
             ],
             "justMyCode": false,
@@ -256,6 +324,91 @@ docker compose restart uwsgi
 ```
 
 ## Advanced Configuration
+
+### Native macOS Debugging
+
+The `run-debug-macos.sh` script provides an alternative debugging approach for macOS users who want better performance. This script:
+
+#### Features
+- Runs Django natively on macOS (better performance)
+- Keeps supporting services in Docker (PostgreSQL, Redis, MailHog)
+- Automatically sets up Python virtual environment
+- Configures environment variables to connect to Docker services
+- Handles database migrations and superuser creation
+
+#### Script Options
+
+```bash
+# Basic usage
+./run-debug-macos.sh
+
+# Skip dependency installation (if already done)
+./run-debug-macos.sh --skip-deps
+
+# Skip Docker service startup (if already running)
+./run-debug-macos.sh --skip-docker
+
+# Skip database migrations
+./run-debug-macos.sh --skip-migrations
+
+# Use custom ports
+./run-debug-macos.sh --port 8001 --debug-port 5679
+
+# Show help
+./run-debug-macos.sh --help
+```
+
+#### Script Workflow
+
+1. **Prerequisites Check**: Verifies Python 3, pip3, Docker are installed
+2. **Virtual Environment**: Creates/activates Python virtual environment
+3. **Dependencies**: Installs requirements.txt and debugpy
+4. **Docker Services**: Starts PostgreSQL, Redis, MailHog in Docker
+5. **Environment Setup**: Configures variables to connect to Docker services
+6. **Database Setup**: Runs migrations and creates superuser
+7. **Debug Server**: Starts Django with debugpy on native macOS
+
+#### Differences from Docker Debugging
+
+| Aspect | Docker Debugging | Native macOS Debugging |
+|--------|------------------|------------------------|
+| **Performance** | Slower (Docker overhead) | Faster (native execution) |
+| **Setup** | Simpler | Requires local Python |
+| **Portability** | Works everywhere | macOS only |
+| **URL** | http://localhost:8080 | http://localhost:8000 |
+| **Services** | All in Docker | Django native, others in Docker |
+
+#### Troubleshooting Native macOS Debugging
+
+**Python Version Issues:**
+```bash
+# Install Python 3 via Homebrew
+brew install python3
+
+# Check Python version
+python3 --version
+```
+
+**Virtual Environment Issues:**
+```bash
+# Remove and recreate virtual environment
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+**Docker Service Connection Issues:**
+```bash
+# Verify Docker services are running
+docker compose ps
+
+# Check PostgreSQL is accessible
+docker compose exec postgres pg_isready -U defectdojo
+
+# Restart Docker services if needed
+docker compose restart postgres redis mailhog
+```
 
 ### Debugging Specific Services
 
