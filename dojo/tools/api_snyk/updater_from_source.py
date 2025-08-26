@@ -20,23 +20,29 @@ class SnykApiUpdaterFromSource:
 
     @staticmethod
     def get_findings_to_update():
-        return Finding.objects.filter(
+        findings = Finding.objects.filter(
             snyk_issue__isnull=False,
             active=True,
         ).select_related("snyk_issue")
+        logger.debug(f"Found {findings.count()} findings with Snyk issues to potentially update")
+        return findings
 
     def update(self, finding):
         snyk_issue = finding.snyk_issue
         if not snyk_issue:
+            logger.debug(f"Finding {finding.id} has no associated Snyk issue, skipping update")
             return
 
-        client, config = SnykApiImporter.prepare_client(finding.test)
-        # we don't care about config, each finding knows which config was used
-        # during import
-
-        org_id = config.service_key_1
+        logger.debug(f"Checking Snyk status for finding {finding.id} with issue {snyk_issue.key}")
 
         try:
+            client, config = SnykApiImporter.prepare_client(finding.test)
+            # we don't care about config, each finding knows which config was used
+            # during import
+
+            org_id = config.service_key_1
+            logger.debug(f"Using organization ID: {org_id}")
+
             issue = client.get_issue(org_id, snyk_issue.key)
             if issue:  # Issue could have disappeared in Snyk
                 current_status = "IGNORED" if issue.get("ignored", False) else "OPEN"
@@ -51,8 +57,13 @@ class SnykApiUpdaterFromSource:
                         f"Original Snyk issue '{snyk_issue}' has changed. Updating DefectDojo finding '{finding}'...",
                     )
                     self.update_finding_status(finding, current_status, issue)
+                else:
+                    logger.debug("No status change needed - Snyk and DefectDojo are in sync")
+            else:
+                logger.warning(f"Issue {snyk_issue.key} not found in Snyk (may have been deleted)")
         except Exception as e:
             logger.warning(f"Failed to check Snyk issue {snyk_issue.key}: {str(e)}")
+            logger.exception("Exception details for Snyk status check failure")
 
     @staticmethod
     def get_snyk_status_for(finding):
@@ -65,11 +76,16 @@ class SnykApiUpdaterFromSource:
             target_status = "IGNORED"
         elif finding.active:
             target_status = "OPEN"
+        
+        logger.debug(f"Mapped finding status to Snyk status: {target_status} for finding {finding.id}")
         return target_status
 
     @staticmethod
     def update_finding_status(finding, snyk_status, issue_data=None):
+        logger.debug(f"Updating finding {finding.id} to match Snyk status: {snyk_status}")
+        
         if snyk_status == "OPEN":
+            logger.debug("Setting finding to active/open status")
             finding.active = True
             finding.verified = True
             finding.false_p = False
@@ -84,8 +100,10 @@ class SnykApiUpdaterFromSource:
                 ignore_reasons = issue_data["ignoreReasons"]
                 if ignore_reasons:
                     ignore_reason = ignore_reasons[0].get("reason", "").lower()
+                    logger.debug(f"Found specific ignore reason: {ignore_reason}")
 
             if ignore_reason == "false-positive" or ignore_reason == "not-vulnerable":
+                logger.debug("Setting finding as false positive")
                 finding.active = False
                 finding.verified = False
                 finding.false_p = True
@@ -94,6 +112,7 @@ class SnykApiUpdaterFromSource:
                 ra_helper.remove_finding.from_any_risk_acceptance(finding)
 
             elif ignore_reason == "fixed":
+                logger.debug("Setting finding as mitigated/fixed")
                 finding.active = False
                 finding.verified = True
                 finding.false_p = False
@@ -102,6 +121,7 @@ class SnykApiUpdaterFromSource:
                 ra_helper.remove_finding.from_any_risk_acceptance(finding)
 
             elif ignore_reason == "wont-fix" or ignore_reason == "no-fix":
+                logger.debug("Creating risk acceptance for finding")
                 finding.active = False
                 finding.verified = True
                 finding.false_p = False
@@ -113,6 +133,7 @@ class SnykApiUpdaterFromSource:
 
             else:
                 # Generic ignore - treat as accepted risk
+                logger.debug("Creating generic risk acceptance for ignored finding")
                 finding.active = False
                 finding.verified = True
                 finding.false_p = False
@@ -123,3 +144,4 @@ class SnykApiUpdaterFromSource:
                 ).accepted_findings.set([finding])
 
         finding.save(issue_updater_option=False, dedupe_option=False)
+        logger.info(f"Successfully updated finding {finding.id} status to match Snyk")
