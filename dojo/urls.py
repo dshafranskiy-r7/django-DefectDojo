@@ -2,6 +2,7 @@ import logging
 
 from django.conf import settings
 from django.conf.urls import include
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import re_path
@@ -267,6 +268,13 @@ if hasattr(settings, "DJANGO_ADMIN_ENABLED"):
     if settings.DJANGO_ADMIN_ENABLED:
         #  django admin
         urlpatterns += [re_path(r"^{}admin/".format(get_system_setting("url_prefix")), admin.site.urls)]
+
+# Serve static files when UWSGI_DEBUG is enabled
+if hasattr(settings, "UWSGI_DEBUG"):
+    if settings.UWSGI_DEBUG:
+        # Use Django's staticfiles serve view which handles both STATIC_ROOT and STATICFILES_DIRS
+        from django.contrib.staticfiles.views import serve as staticfiles_serve
+        urlpatterns += [re_path(r"^{}/(?P<path>.*)$".format(settings.STATIC_URL.strip("/")), staticfiles_serve)]
 
 # sometimes urlpatterns needed be added from local_settings.py to avoid having to modify core defect dojo files
 if hasattr(settings, "EXTRA_URL_PATTERNS"):

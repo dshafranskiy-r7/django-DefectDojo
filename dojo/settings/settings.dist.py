@@ -29,6 +29,7 @@ env = environ.FileAwareEnv(
     # Set casting and default values
     DD_SITE_URL=(str, "http://localhost:8080"),
     DD_DEBUG=(bool, False),
+    DD_UWSGI_DEBUG=(bool, False),
     DD_TEMPLATE_DEBUG=(bool, False),
     DD_LOG_LEVEL=(str, ""),
     DD_DJANGO_METRICS_ENABLED=(bool, False),
@@ -353,6 +354,7 @@ if Path(root("dojo/settings/.env.prod")).is_file() or "DD_ENV_PATH" in os.enviro
 
 # False if not in os.environ
 DEBUG = env("DD_DEBUG")
+UWSGI_DEBUG = env("DD_UWSGI_DEBUG")
 TEMPLATE_DEBUG = env("DD_TEMPLATE_DEBUG")
 
 # Hosts/domain names that are valid for this site; required if DEBUG is False
