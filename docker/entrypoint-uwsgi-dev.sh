@@ -23,7 +23,7 @@ fi
 
 if [ "${DD_UWSGI_DEBUG}" = "True" ]; then
   echo "!!! Running minimal debug"
-  debugpy --listen 0.0.0.0:5678 --wait-for-client manage.py runserver 0.0.0.0:8000
+  debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000
 
 else
   echo "!!! Running normal execution"

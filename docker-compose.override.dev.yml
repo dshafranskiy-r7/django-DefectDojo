@@ -4,6 +4,7 @@ services:
     entrypoint: ['/wait-for-it.sh', '${DD_DATABASE_HOST:-postgres}:${DD_DATABASE_PORT:-5432}', '-t', '30', '--', '/entrypoint-uwsgi-dev.sh']
     volumes:
       - '.:/app:z'
+      - 'shared_static:/app/components/node_modules'  # Mount shared volume to /app/static
     environment:
       PYTHONWARNINGS: error  # We are strict about Warnings during development
       DD_DEBUG: 'True'
@@ -45,6 +46,7 @@ services:
   nginx:
     volumes:
       - './dojo/static/dojo:/usr/share/nginx/html/static/dojo'
+      - 'shared_static:/usr/share/nginx/html/static'
   postgres:
     ports:
       - target: ${DD_DATABASE_PORT:-5432}
@@ -66,3 +68,7 @@ services:
         mode: host
   "webhook.endpoint":
     image: mccutchen/go-httpbin:2.18.3@sha256:3992f3763e9ce5a4307eae0a869a78b4df3931dc8feba74ab823dd2444af6a6b
+
+volumes:
+  shared_static:
+    driver: local
