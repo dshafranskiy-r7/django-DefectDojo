@@ -65,7 +65,7 @@ class SnykAPI:
         """
         logger.debug(f"Fetching organization details for ID: {org_id}")
         response = self.session.get(
-            url=f"{self.snyk_api_url}/org/{org_id}",
+            url=f"{self.snyk_api_url}/orgs/{org_id}?version={snyk_api_version}",
             headers=self.default_headers,
             timeout=settings.REQUESTS_TIMEOUT,
         )
@@ -78,17 +78,19 @@ class SnykAPI:
             )
             raise Exception(msg)
 
-        org_data = response.json().get("org")
-        logger.debug(f"Retrieved organization: {org_data.get('name', org_id) if org_data else 'None'}")
-        return org_data
+        org_name = response.json().get("data", {}).get("attributes", {}).get("slug", "unknown-organization")
+
+        logger.debug(f"Retrieved organization: {org_name} from ID: {org_id}")
+        return org_name
 
     def get_projects(self, org_id):
         """
         Get all projects for an organization.
         """
         logger.debug(f"Fetching projects for organization: {org_id}")
-        response = self.session.post(
-            url=f"{self.snyk_api_url}/org/{org_id}/projects",
+
+        response = self.session.get(
+            url=f"{self.snyk_api_url}/orgs/{org_id}/projects?version={snyk_api_version}&meta_count=only",
             headers=self.default_headers,
             timeout=settings.REQUESTS_TIMEOUT,
         )
@@ -101,9 +103,8 @@ class SnykAPI:
             )
             raise Exception(msg)
 
-        projects_data = response.json().get("projects", [])
-        logger.info(f"Retrieved {len(projects_data)} projects for organization {org_id}")
-        logger.debug(f"Projects: {[proj.get('name', proj.get('id', 'unknown')) for proj in projects_data]}")
+        projects_data = response.json().get("meta", []).get("count", 0)
+        logger.info(f"Retrieved {projects_data} projects for organization {org_id}")
         return projects_data
 
     def get_project(self, org_id, project_id):
@@ -236,7 +237,7 @@ class SnykAPI:
         """Returns user information or raise error."""
         logger.debug("Testing Snyk API connection")
         response = self.session.get(
-            url=f"{self.snyk_api_url}/user/me",
+            url=f"{self.snyk_api_url}/self?version={snyk_api_version}",
             headers=self.default_headers,
             timeout=settings.REQUESTS_TIMEOUT,
         )
@@ -251,7 +252,7 @@ class SnykAPI:
 
         try:
             user_data = response.json()
-            username = user_data.get("username", "unknown")
+            username = user_data["data"]["attributes"]["name"]
             logger.info(f"Successfully connected to Snyk as user: {username}")
         except RequestsJSONDecodeError:
             logger.error("Connection test received non-JSON response")
@@ -270,19 +271,10 @@ class SnykAPI:
 
         logger.debug(f"Testing product connection for org_id: {org_id}, project_id: {project_id}")
 
-        # Test organization access
-        org = self.get_organization(org_id)
-        org_name = org.get("name", org_id)
+        org_name = self.get_organization(org_id)
+
         logger.debug(f"Successfully accessed organization: {org_name}")
 
-        if project_id:
-            # Test project access
-            project = self.get_project(org_id, project_id)
-            project_name = project.get("name", project_id)
-            logger.info(f"Product connection test successful for project '{project_name}' in organization '{org_name}'")
-            return f"Successfully connected to Snyk project '{project_name}' in organization '{org_name}'"
-        else:
-            # Just test organization access
-            projects = self.get_projects(org_id)
-            logger.info(f"Product connection test successful for organization '{org_name}' with {len(projects)} projects")
-            return f"Successfully connected to Snyk organization '{org_name}' with {len(projects)} projects"
+        projects_count = self.get_projects(org_id)
+        logger.info(f"Product connection test successful for organization '{org_name}' with {projects_count} projects")
+        return f"Successfully connected to Snyk organization '{org_name}' with {projects_count} projects"
