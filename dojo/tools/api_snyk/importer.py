@@ -113,6 +113,8 @@ class SnykApiImporter:
                 f"Found {len(issues)} issues for {'project ' + project_id if project_id else 'organization ' + org_id}",
             )
 
+            org_mapping = client.get_id_to_org_mapping()
+
             for issue in issues:
                 issue_id = issue.get("id")
                 logger.debug(f"Processing issue: {issue_id}")
@@ -122,31 +124,51 @@ class SnykApiImporter:
                     logger.debug(f"Skipping ignored issue: {issue_id}")
                     continue
 
-                issue_url = issue.get("url", "")
+                key = issue["attributes"]["key"]
+                project = issue["relationships"]["scan_item"]["data"]["id"]
+                org_name = org_mapping.get(org_id, "unknown_org")
+
+                issue_url = f"https://app.snyk.io/org/{org_name}/project/{project}#issue-{key}"
 
                 # Get detailed issue information
-                issue_title = issue.get("title", "Unknown Snyk Issue")
+                issue_title = issue.get("attributes", {}).get("title", "Unknown Snyk Issue")
                 title = textwrap.shorten(text=issue_title, width=500)
                 logger.debug(f"Issue title: {title}")
 
-                # Extract vulnerability information
-                vuln_pkg = issue.get("package", "")
-                vuln_version = issue.get("version", "")
-                snyk_severity = issue.get("severity", "low")
+                # Extract vulnerability information from coordinates
+                vuln_pkg = ""
+                vuln_version = ""
+                coordinates = issue.get("attributes", {}).get("coordinates", [])
+                if coordinates and len(coordinates) > 0:
+                    representations = coordinates[0].get("representations", [])
+                    if representations and len(representations) > 0:
+                        dependency = representations[0].get("dependency", {})
+                        vuln_pkg = dependency.get("package_name", "")
+                        vuln_version = dependency.get("package_version", "")
+
+                # Get severity from effective_severity_level
+                snyk_severity = issue.get("attributes", {}).get("effective_severity_level", "low")
                 severity = self.convert_snyk_severity(snyk_severity)
                 logger.debug(
                     f"Issue details - package: {vuln_pkg}, version: {vuln_version}, severity: {snyk_severity} -> {severity}")
 
                 # Build description
                 description_parts = []
-                if issue.get("description"):
-                    description_parts.append(issue.get("description"))
+                # Use title as description if no separate description field
+                description_parts.append(issue_title)
 
                 if vuln_pkg:
                     description_parts.append(f"Package: {vuln_pkg}")
 
                 if vuln_version:
                     description_parts.append(f"Version: {vuln_version}")
+
+                # Add exploit details if available
+                exploit_details = issue.get("attributes", {}).get("exploit_details", {})
+                if exploit_details:
+                    sources = exploit_details.get("sources", [])
+                    if sources:
+                        description_parts.append(f"Exploit Sources: {', '.join(sources)}")
 
                 description = "\n\n".join(
                     description_parts) if description_parts else "No description available"
@@ -159,20 +181,48 @@ class SnykApiImporter:
                     references += f"[Snyk Issue]({issue_url})\n"
                     logger.debug(f"Added issue URL to references: {issue_url}")
 
-                # Extract additional details
-                cwe = self.extract_cwe(issue)
-                cvss_score = issue.get("cvssScore")
-                file_path = issue.get("from", [""])[
-                    0] if issue.get("from") else ""
+                # Add CVE references from problems
+                problems = issue.get("attributes", {}).get("problems", [])
+                for problem in problems:
+                    if problem.get("source") == "NVD" and problem.get("url"): # TODO - why only NVD
+                        references += f"[{problem.get('id')}]({problem.get('url')})\n"
+
+                # Extract CWE from classes
+                cwe = None
+                classes = issue.get("attributes", {}).get("classes", [])
+                for cls in classes:
+                    if cls.get("source") == "CWE" and cls.get("id", "").startswith("CWE-"):
+                        try:
+                            cwe = int(cls.get("id")[4:])
+                            logger.debug(f"Extracted CWE number: {cwe}")
+                            break
+                        except ValueError:
+                            logger.debug(f"Failed to parse CWE number from: {cls.get('id')}")
+
+                # Get CVSS score from severities (prefer Snyk source)
+                cvss_score = None
+                severities = issue.get("attributes", {}).get("severities", [])
+                for severity_info in severities:
+                    if severity_info.get("source") == "Snyk":
+                        cvss_score = severity_info.get("score")
+                        break
+                if not cvss_score and severities:
+                    cvss_score = severities[0].get("score")
+
+                file_path = ""  # Not available for 3rd-party dependencies
                 logger.debug(
                     f"Extracted metadata - CWE: {cwe}, CVSS: {cvss_score}, file_path: {file_path}")
+
+                package_type = issue.get("attributes", {}).get("type", "package_vulnerability")
+                if package_type == "package_vulnerability":
+                    package_type = "package"
 
                 # Create or update Snyk issue tracking
                 snyk_issue, created = Snyk_Issue.objects.update_or_create(
                     key=issue_id,
                     defaults={
-                        "status": "open" if not self.is_ignored(issue) else "ignored",
-                        "type": issue.get("type", "vuln"),
+                        "status": issue.get("attributes", {}).get("status", "open"),
+                        "type": package_type,
                     },
                 )
                 logger.debug(
@@ -249,51 +299,3 @@ class SnykApiImporter:
         logger.debug(
             f"Converted Snyk severity '{snyk_severity}' to DefectDojo severity '{converted}'")
         return converted
-
-    @staticmethod
-    def extract_cwe(issue):
-        """Extract CWE number from Snyk issue."""
-        logger.debug(f"Extracting CWE from issue {issue.get('id', 'unknown')}")
-
-        # Try to find CWE in various fields
-        for field in ["cwe", "identifiers"]:
-            if field in issue:
-                cwe_data = issue[field]
-                logger.debug(f"Found CWE data in field '{field}': {cwe_data}")
-
-                if isinstance(cwe_data, list):
-                    for item in cwe_data:
-                        if isinstance(item, str) and item.startswith("CWE-"):
-                            try:
-                                cwe_num = int(item[4:])
-                                logger.debug(
-                                    f"Extracted CWE number: {cwe_num}")
-                                return cwe_num
-                            except ValueError:
-                                logger.debug(
-                                    f"Failed to parse CWE number from: {item}")
-                                continue
-                        elif isinstance(item, dict) and item.get("type") == "CWE":
-                            try:
-                                cwe_num = int(
-                                    item.get("value", "").replace("CWE-", ""))
-                                logger.debug(
-                                    f"Extracted CWE number from dict: {cwe_num}")
-                                return cwe_num
-                            except ValueError:
-                                logger.debug(
-                                    f"Failed to parse CWE number from dict: {item}")
-                                continue
-                elif isinstance(cwe_data, str) and cwe_data.startswith("CWE-"):
-                    try:
-                        cwe_num = int(cwe_data[4:])
-                        logger.debug(
-                            f"Extracted CWE number from string: {cwe_num}")
-                        return cwe_num
-                    except ValueError:
-                        logger.debug(
-                            f"Failed to parse CWE number from string: {cwe_data}")
-                        continue
-
-        logger.debug("No CWE found in issue")
-        return None
