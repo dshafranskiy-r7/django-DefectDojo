@@ -14,12 +14,14 @@ class SnykAPI:
         self.session = requests.Session()
         self.default_headers = {
             "User-Agent": "DefectDojo",
-            "Authorization": f"token {prepare_for_view(tool_config.api_key)}",
-            "Content-Type": "application/vnd.api+json"
+            "authorization": tool_config.api_key,
+            "accept": "application/vnd.api+json"
         }
         self.snyk_api_url = tool_config.url.rstrip("/")
-        if not self.snyk_api_url.endswith("/api/v1"):
-            self.snyk_api_url += "/api/v1"
+        # not sure if this is necessary though
+        if not self.snyk_api_url.endswith("/rest"):
+            self.snyk_api_url += "/rest"
+
         logger.debug(f"Snyk API URL configured as: {self.snyk_api_url}")
 
     def get_organizations(self):
@@ -120,17 +122,16 @@ class SnykAPI:
         """
         Get issues for an organization or specific project.
         """
-        if project_id:
-            url = f"{self.snyk_api_url}/org/{org_id}/project/{project_id}/issues"
-            logger.debug(f"Fetching issues for project {project_id} in organization {org_id}")
-        else:
-            url = f"{self.snyk_api_url}/org/{org_id}/issues"
-            logger.debug(f"Fetching issues for organization {org_id}")
-        
-        response = self.session.post(
+
+        # TODO - move to API config params
+        snyk_api_version="2024-10-15"
+
+        url = f"{self.snyk_api_url}/orgs/{org_id}/issues?version={snyk_api_version}"
+        logger.debug(f"Fetching issues for organization {org_id}")
+
+        response = self.session.get(
             url=url,
             headers=self.default_headers,
-            json={"filters": {}},
             timeout=settings.REQUESTS_TIMEOUT,
         )
 
@@ -200,7 +201,7 @@ class SnykAPI:
                 f'due to {response.status_code} - {response.content.decode("utf-8")}'
             )
             raise Exception(msg)
-        
+
         logger.info(f"Successfully ignored issue {issue_id} with reason: {reason}")
 
     def unignore_issue(self, org_id, issue_id):
@@ -221,7 +222,7 @@ class SnykAPI:
                 f'due to {response.status_code} - {response.content.decode("utf-8")}'
             )
             raise Exception(msg)
-        
+
         logger.info(f"Successfully unignored issue {issue_id}")
 
     def test_connection(self):
@@ -259,14 +260,14 @@ class SnykAPI:
     def test_product_connection(self, api_scan_configuration):
         org_id = api_scan_configuration.service_key_1
         project_id = api_scan_configuration.service_key_2 or None
-        
+
         logger.debug(f"Testing product connection for org_id: {org_id}, project_id: {project_id}")
-        
+
         # Test organization access
         org = self.get_organization(org_id)
         org_name = org.get("name", org_id)
         logger.debug(f"Successfully accessed organization: {org_name}")
-        
+
         if project_id:
             # Test project access
             project = self.get_project(org_id, project_id)
