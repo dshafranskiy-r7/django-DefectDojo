@@ -3,10 +3,13 @@ import requests
 from django.conf import settings
 from requests.exceptions import JSONDecodeError as RequestsJSONDecodeError
 
+from dojo.tools.appcheck_web_application_scanner.engines import base
 from dojo.utils import prepare_for_view
 
 logger = logging.getLogger(__name__)
 
+# TODO - move to API config params
+snyk_api_version="2024-10-15"
 
 class SnykAPI:
     def __init__(self, tool_config):
@@ -23,6 +26,14 @@ class SnykAPI:
             self.snyk_api_url += "/rest"
 
         logger.debug(f"Snyk API URL configured as: {self.snyk_api_url}")
+
+    # TODO - this might only run once
+    def get_id_to_org_mapping(self):
+        url = f"/orgs?version={snyk_api_version}"
+        response = requests.get(self.snyk_api_url + url, headers=self.default_headers)
+        response.raise_for_status()
+
+        return {item["id"]: item["attributes"]["slug"] for item in response.json()["data"]}
 
     def get_organizations(self):
         """
@@ -122,10 +133,6 @@ class SnykAPI:
         """
         Get issues for an organization or specific project.
         """
-
-        # TODO - move to API config params
-        snyk_api_version="2024-10-15"
-
         url = f"{self.snyk_api_url}/orgs/{org_id}/issues?version={snyk_api_version}"
         logger.debug(f"Fetching issues for organization {org_id}")
 
@@ -143,7 +150,7 @@ class SnykAPI:
             )
             raise Exception(msg)
 
-        issues_data = response.json().get("issues", [])
+        issues_data = response.json().get("data", [])
         scope = f"project {project_id}" if project_id else f"organization {org_id}"
         logger.info(f"Retrieved {len(issues_data)} issues for {scope}")
         logger.debug(f"Issue types: {list(set(issue.get('type', 'unknown') for issue in issues_data))}")
