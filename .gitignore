@@ -5,8 +5,10 @@ docker/static/
 # docker-compose override symbolic link
 docker-compose.override.yml
 
-# VS Code
+# VS Code (exclude user-specific settings but include shared configs)
 .vscode/
+!.vscode/launch.json
+!.vscode/tasks.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
