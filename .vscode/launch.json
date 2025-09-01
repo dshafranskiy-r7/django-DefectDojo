@@ -1,0 +1,82 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Django: Debug Server",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/manage.py",
+            "args": [
+                "runserver",
+                "0.0.0.0:8000",
+                "--noreload"
+            ],
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "dojo.settings.settings",
+                "DD_DEBUG": "True"
+            },
+            "django": true,
+            "autoReload": {
+                "enable": true
+            },
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
+        },
+        {
+            "name": "Django: Debug Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/manage.py",
+            "args": [
+                "test",
+                "--debug-mode"
+            ],
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "dojo.settings.unittests"
+            },
+            "django": true,
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
+        },
+        {
+            "name": "Django: Debug Single Test",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/manage.py",
+            "args": [
+                "test",
+                "${input:testCase}",
+                "--debug-mode"
+            ],
+            "env": {
+                "DJANGO_SETTINGS_MODULE": "dojo.settings.unittests"
+            },
+            "django": true,
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
+        },
+        {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "DJANGO_SETTINGS_MODULE": "dojo.settings.settings"
+            }
+        }
+    ],
+    "inputs": [
+        {
+            "id": "testCase",
+            "description": "Test case to run (e.g., unittests.test_utils.TestUtils.test_encryption)",
+            "default": "unittests.test_utils",
+            "type": "promptString"
+        }
+    ]
+}
