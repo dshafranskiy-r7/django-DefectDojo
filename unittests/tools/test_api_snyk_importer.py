@@ -14,14 +14,16 @@ from dojo.tools.api_snyk.importer import SnykApiImporter
 from unittests.dojo_test_case import DojoTestCase, get_unit_tests_scans_path
 
 
-def dummy_organization(self, *args, **kwargs):
-    with (get_unit_tests_scans_path("api_snyk") / "organization.json").open(encoding="utf-8") as json_file:
-        return json.load(json_file)
+def dummy_organization(*args, **kwargs):
+    return { "org": { "id": "test-org-id", "name": "test-org-name" } }
 
 
-def dummy_issues(self, *args, **kwargs):
+def dummy_issues(*args, **kwargs):
     with (get_unit_tests_scans_path("api_snyk") / "issues.json").open(encoding="utf-8") as json_file:
-        return json.load(json_file)
+        return json.load(json_file).get("data", None)
+
+def dummy_mapping(*args, **kwargs):
+    return {"test-org-id": "test-org-name"}
 
 class TestApiSnykImporter(DojoTestCase):
     def setUp(self):
@@ -51,16 +53,16 @@ class TestApiSnykImporter(DojoTestCase):
     @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_organization")
     @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_issues")
     @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_id_to_org_mapping")
-    def test_import_issues(self, mock_get_issues, mock_get_organization, mock_get_id_to_org_mapping):
+    def test_import_issues(self, mock_get_organization, mock_get_issues, mock_get_id_to_org_mapping):
         mock_get_organization.side_effect = dummy_organization
         mock_get_issues.side_effect = dummy_issues
-        mock_get_id_to_org_mapping.side_effect = lambda: {"test-org-id": "test-org-name"}
+        mock_get_id_to_org_mapping.side_effect = dummy_mapping
 
         importer = SnykApiImporter()
         findings = importer.import_issues(self.test)
         print(len(findings))
 
-        # Should return 2 findings (excluding the ignored one)
+        # Should return 2 findings (excluding the ignored)
         self.assertEqual(2, len(findings))
 
         # Test conversion methods
@@ -73,13 +75,6 @@ class TestApiSnykImporter(DojoTestCase):
     def test_is_ignored(self):
         importer = SnykApiImporter()
 
-        self.assertTrue(importer.is_ignored({"ignored": True}))
-        self.assertFalse(importer.is_ignored({"ignored": False}))
-        self.assertFalse(importer.is_ignored({}))
-
-    def test_is_patched(self):
-        importer = SnykApiImporter()
-
-        self.assertTrue(importer.is_patched({"patched": True}))
-        self.assertFalse(importer.is_patched({"patched": False}))
-        self.assertFalse(importer.is_patched({}))
+        self.assertTrue(importer.is_ignored({"attributes": {"ignored": True}}))
+        self.assertFalse(importer.is_ignored({"attributes": {"ignored": False}}))
+        self.assertFalse(importer.is_ignored({"attributes": {}}))

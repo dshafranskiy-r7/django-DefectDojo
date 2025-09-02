@@ -1,67 +1,480 @@
 {
-  "issues": [
+  "jsonapi": {
+    "version": "1.0"
+  },
+  "links": {
+    "self": "/rest/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3/issues?limit=10&version=2024-10-15",
+    "first": "/rest/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3/issues?limit=10&version=2024-10-15",
+    "last": "/rest/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3/issues?ending_before=end&limit=10&version=2024-10-15",
+    "next": "/rest/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3/issues?limit=10&starting_after=eyJvcmdJZCI6ImQzYWUyMmVjLTQ4NzMtNDJlZS04YTFkLWEzOTA3YzY2MjViMyIsInNldmVyaXR5Ijo0MCwiY3JlYXRlZEF0IjoiMjAyNC0xMC0zMFQwNTo1MToxNi41WiIsImlkIjoiMzkxNmY4ZWItMWYwZS00MGJhLWI3ZTAtNDA3ZDNlOTBlNDZmIiwidG90YWwiOnsiY2FsY3VsYXRlZEF0IjoiMDAwMS0wMS0wMVQwMDowMDowMFoifX0%3D&version=2024-10-15"
+  },
+  "data": [
     {
-      "id": "SNYK-JS-LODASH-567746",
-      "title": "Prototype Pollution",
-      "type": "vuln",
-      "package": "lodash",
-      "version": "4.17.15",
-      "severity": "high",
-      "url": "https://snyk.io/vuln/SNYK-JS-LODASH-567746",
-      "description": "Affected versions of lodash are vulnerable to prototype pollution. The utilities merge, mergeWith, and defaultsDeep can be tricked into adding or modifying properties of Object.prototype. This is due to an incomplete fix to CVE-2018-3721.",
-      "from": ["package.json", "lodash@4.17.15"],
-      "cvssScore": 7.3,
-      "cwe": ["CWE-1321"],
-      "identifiers": [
-        {
-          "type": "CWE",
-          "value": "CWE-1321"
+      "id": "47954987-c7b1-45b5-9ea3-b2730866bfbf",
+      "type": "issue",
+      "attributes": {
+        "classes": [
+          {
+            "id": "CWE-502",
+            "source": "CWE",
+            "type": "weakness"
+          }
+        ],
+        "coordinates": [
+          {
+            "is_fixable_manually": false,
+            "is_fixable_snyk": true,
+            "is_fixable_upstream": false,
+            "is_patchable": false,
+            "is_pinnable": false,
+            "is_upgradeable": true,
+            "reachability": "no-info",
+            "representations": [
+              {
+                "dependency": {
+                  "package_name": "LiteDB",
+                  "package_version": "5.0.9"
+                }
+              }
+            ]
+          }
+        ],
+        "created_at": "2024-08-20T12:26:25.817Z",
+        "effective_severity_level": "critical",
+        "exploit_details": {
+          "maturity_levels": [
+            {
+              "format": "CVSSv3",
+              "level": "Not Defined"
+            },
+            {
+              "format": "CVSSv4",
+              "level": "Not Defined"
+            }
+          ],
+          "sources": []
+        },
+        "ignored": false,
+        "key": "SNYK-DOTNET-LITEDB-3331936",
+        "problems": [
+          {
+            "id": "SNYK-DOTNET-LITEDB-3331936",
+            "source": "SNYK",
+            "type": "vulnerability",
+            "updated_at": "2025-06-06T07:54:34.565373Z"
+          },
+          {
+            "id": "CVE-2022-23535",
+            "source": "NVD",
+            "type": "vulnerability",
+            "updated_at": "2025-06-06T07:54:34.565373Z",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-23535"
+          }
+        ],
+        "risk": {
+          "factors": [],
+          "score": {
+            "model": "v1",
+            "value": 249
+          }
+        },
+        "severities": [
+          {
+            "level": "critical",
+            "modification_time": "2024-03-06T13:56:57.035Z",
+            "score": 9.8,
+            "source": "Snyk",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          },
+          {
+            "level": "critical",
+            "modification_time": "2024-03-11T09:52:58.132Z",
+            "score": 9.8,
+            "source": "NVD",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          }
+        ],
+        "status": "open",
+        "title": "Deserialization of Untrusted Data",
+        "type": "package_vulnerability",
+        "updated_at": "2025-06-06T07:54:32.824Z"
+      },
+      "relationships": {
+        "organization": {
+          "data": {
+            "id": "d3ae22ec-4873-42ee-8a1d-a3907c6625b3",
+            "type": "organization"
+          },
+          "links": {
+            "related": "/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3"
+          }
+        },
+        "scan_item": {
+          "data": {
+            "id": "test-org-id",
+            "type": "project"
+          },
+          "links": {
+            "related": "/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3/projects/test-org-id"
+          }
         }
-      ],
-      "ignored": false,
-      "patched": false
+      }
     },
     {
-      "id": "SNYK-JS-AXIOS-2391665",
-      "title": "Regular Expression Denial of Service (ReDoS)",
-      "type": "vuln",
-      "package": "axios",
-      "version": "0.21.1",
-      "severity": "medium",
-      "url": "https://snyk.io/vuln/SNYK-JS-AXIOS-2391665",
-      "description": "Affected versions of axios are vulnerable to Regular Expression Denial of Service (ReDoS) due to improper input validation in the trim function.",
-      "from": ["package.json", "axios@0.21.1"],
-      "cvssScore": 5.3,
-      "cwe": ["CWE-1333"],
-      "identifiers": [
-        {
-          "type": "CWE",
-          "value": "CWE-1333"
+      "id": "dceee6e4-629f-4466-bc0b-8af3f7e96989",
+      "type": "issue",
+      "attributes": {
+        "classes": [
+          {
+            "id": "CWE-502",
+            "source": "CWE",
+            "type": "weakness"
+          }
+        ],
+        "coordinates": [
+          {
+            "is_fixable_manually": false,
+            "is_fixable_snyk": true,
+            "is_fixable_upstream": false,
+            "is_patchable": false,
+            "is_pinnable": false,
+            "is_upgradeable": true,
+            "reachability": "no-info",
+            "representations": [
+              {
+                "dependency": {
+                  "package_name": "LiteDB",
+                  "package_version": "5.0.9"
+                }
+              }
+            ]
+          }
+        ],
+        "created_at": "2024-08-20T12:26:25.91Z",
+        "effective_severity_level": "critical",
+        "exploit_details": {
+          "maturity_levels": [
+            {
+              "format": "CVSSv3",
+              "level": "Not Defined"
+            },
+            {
+              "format": "CVSSv4",
+              "level": "Not Defined"
+            }
+          ],
+          "sources": []
+        },
+        "ignored": false,
+        "key": "SNYK-DOTNET-LITEDB-3331936",
+        "problems": [
+          {
+            "id": "SNYK-DOTNET-LITEDB-3331936",
+            "source": "SNYK",
+            "type": "vulnerability",
+            "updated_at": "2025-04-21T05:19:14.135382Z"
+          },
+          {
+            "id": "CVE-2022-23535",
+            "source": "NVD",
+            "type": "vulnerability",
+            "updated_at": "2025-04-21T05:19:14.135384Z",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-23535"
+          }
+        ],
+        "risk": {
+          "factors": [],
+          "score": {
+            "model": "v1",
+            "value": 249
+          }
+        },
+        "severities": [
+          {
+            "level": "critical",
+            "modification_time": "2024-03-06T13:56:57.035Z",
+            "score": 9.8,
+            "source": "Snyk",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          },
+          {
+            "level": "critical",
+            "modification_time": "2024-03-11T09:52:58.132Z",
+            "score": 9.8,
+            "source": "NVD",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          }
+        ],
+        "status": "open",
+        "title": "Deserialization of Untrusted Data",
+        "type": "package_vulnerability",
+        "updated_at": "2025-04-02T06:20:49.971Z"
+      },
+      "relationships": {
+        "organization": {
+          "data": {
+            "id": "d3ae22ec-4873-42ee-8a1d-a3907c6625b3",
+            "type": "organization"
+          },
+          "links": {
+            "related": "/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3"
+          }
+        },
+        "scan_item": {
+          "data": {
+            "id": "test-org-id",
+            "type": "project"
+          },
+          "links": {
+            "related": "/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3/projects/test-org-id"
+          }
         }
-      ],
-      "ignored": false,
-      "patched": false
+      }
     },
     {
-      "id": "SNYK-JS-MINIMIST-559764",
-      "title": "Prototype Pollution",
-      "type": "vuln",
-      "package": "minimist",
-      "version": "1.2.0",
-      "severity": "low",
-      "url": "https://snyk.io/vuln/SNYK-JS-MINIMIST-559764",
-      "description": "Affected versions of minimist are vulnerable to prototype pollution. Arguments are not properly sanitized, allowing an attacker to modify the prototype of Object, causing the addition or modification of an existing property that will exist on all objects.",
-      "from": ["package.json", "minimist@1.2.0"],
-      "cvssScore": 3.7,
-      "cwe": ["CWE-1321"],
-      "identifiers": [
-        {
-          "type": "CWE",
-          "value": "CWE-1321"
+      "id": "1f5e7868-41f8-4012-b75c-e31aba761d9b",
+      "type": "issue",
+      "attributes": {
+        "classes": [
+          {
+            "id": "CWE-502",
+            "source": "CWE",
+            "type": "weakness"
+          }
+        ],
+        "coordinates": [
+          {
+            "is_fixable_manually": false,
+            "is_fixable_snyk": true,
+            "is_fixable_upstream": false,
+            "is_patchable": false,
+            "is_pinnable": false,
+            "is_upgradeable": true,
+            "reachability": "no-info",
+            "representations": [
+              {
+                "dependency": {
+                  "package_name": "org.apache.commons:commons-collections4",
+                  "package_version": "4.0"
+                }
+              }
+            ]
+          }
+        ],
+        "created_at": "2024-08-20T12:26:32.797Z",
+        "effective_severity_level": "critical",
+        "exploit_details": {
+          "maturity_levels": [
+            {
+              "format": "CVSSv3",
+              "level": "High"
+            },
+            {
+              "format": "CVSSv4",
+              "level": "Attacked"
+            }
+          ],
+          "sources": [
+            "CISA",
+            "ExploitDB",
+            "Snyk"
+          ]
+        },
+        "ignored": true,
+        "key": "SNYK-JAVA-ORGAPACHECOMMONS-6056423",
+        "problems": [
+          {
+            "id": "CVE-2015-4852",
+            "source": "NVD",
+            "type": "vulnerability",
+            "updated_at": "2025-06-12T08:34:20.602095Z",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2015-4852"
+          },
+          {
+            "id": "SNYK-JAVA-ORGAPACHECOMMONS-6056423",
+            "source": "SNYK",
+            "type": "vulnerability",
+            "updated_at": "2025-06-12T08:34:20.602095Z"
+          }
+        ],
+        "risk": {
+          "factors": [],
+          "score": {
+            "model": "v1",
+            "value": 921
+          }
+        },
+        "severities": [
+          {
+            "level": "critical",
+            "modification_time": "2025-02-10T14:08:33.599Z",
+            "score": 9.8,
+            "source": "Snyk",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H/E:H/RL:O/RC:C",
+            "version": "3.1"
+          },
+          {
+            "level": "critical",
+            "modification_time": "2024-03-11T09:54:13.273Z",
+            "score": 9.8,
+            "source": "NVD",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          }
+        ],
+        "status": "open",
+        "title": "Deserialization of Untrusted Data",
+        "type": "package_vulnerability",
+        "updated_at": "2025-06-12T08:34:17.626Z"
+      },
+      "relationships": {
+        "organization": {
+          "data": {
+            "id": "d3ae22ec-4873-42ee-8a1d-a3907c6625b3",
+            "type": "organization"
+          },
+          "links": {
+            "related": "/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3"
+          }
+        },
+        "scan_item": {
+          "data": {
+            "id": "test-org-id",
+            "type": "project"
+          },
+          "links": {
+            "related": "/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3/projects/test-org-id"
+          }
         }
-      ],
-      "ignored": true,
-      "patched": false
+      }
+    },
+    {
+      "id": "8dfb9f3d-58af-4325-bbb8-0dcc0fd8eda8",
+      "type": "issue",
+      "attributes": {
+        "classes": [
+          {
+            "id": "CWE-502",
+            "source": "CWE",
+            "type": "weakness"
+          }
+        ],
+        "coordinates": [
+          {
+            "is_fixable_manually": false,
+            "is_fixable_snyk": true,
+            "is_fixable_upstream": false,
+            "is_patchable": false,
+            "is_pinnable": false,
+            "is_upgradeable": true,
+            "reachability": "no-info",
+            "representations": [
+              {
+                "dependency": {
+                  "package_name": "org.apache.commons:commons-collections4",
+                  "package_version": "4.0"
+                }
+              }
+            ]
+          }
+        ],
+        "created_at": "2024-08-20T12:26:32.797Z",
+        "effective_severity_level": "critical",
+        "exploit_details": {
+          "maturity_levels": [
+            {
+              "format": "CVSSv3",
+              "level": "High"
+            },
+            {
+              "format": "CVSSv4",
+              "level": "Proof of Concept"
+            }
+          ],
+          "sources": [
+            "PoC in GitHub",
+            "Snyk"
+          ]
+        },
+        "ignored": true,
+        "key": "SNYK-JAVA-ORGAPACHECOMMONS-30008",
+        "problems": [
+          {
+            "id": "SNYK-JAVA-ORGAPACHECOMMONS-30008",
+            "source": "SNYK",
+            "type": "vulnerability",
+            "updated_at": "2025-07-26T08:31:26.600577Z"
+          },
+          {
+            "id": "CVE-2015-7501",
+            "source": "NVD",
+            "type": "vulnerability",
+            "updated_at": "2025-07-26T08:31:26.600579Z",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2015-7501"
+          }
+        ],
+        "risk": {
+          "factors": [],
+          "score": {
+            "model": "v1",
+            "value": 921
+          }
+        },
+        "severities": [
+          {
+            "level": "critical",
+            "modification_time": "2025-02-10T15:10:37.133Z",
+            "score": 9.8,
+            "source": "Snyk",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H/E:H/RL:O/RC:C",
+            "version": "3.1"
+          },
+          {
+            "level": "critical",
+            "modification_time": "2024-03-11T09:46:27.924Z",
+            "score": 9.8,
+            "source": "NVD",
+            "vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.0"
+          },
+          {
+            "level": "high",
+            "modification_time": "2024-03-11T09:52:38.421Z",
+            "score": 7.3,
+            "source": "Red Hat",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L",
+            "version": "3.1"
+          }
+        ],
+        "status": "open",
+        "title": "Deserialization of Untrusted Data",
+        "type": "package_vulnerability",
+        "updated_at": "2025-07-26T08:31:24.911Z"
+      },
+      "relationships": {
+        "organization": {
+          "data": {
+            "id": "d3ae22ec-4873-42ee-8a1d-a3907c6625b3",
+            "type": "organization"
+          },
+          "links": {
+            "related": "/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3"
+          }
+        },
+        "scan_item": {
+          "data": {
+            "id": "test-org-id",
+            "type": "project"
+          },
+          "links": {
+            "related": "/orgs/d3ae22ec-4873-42ee-8a1d-a3907c6625b3/projects/test-org-id"
+          }
+        }
+      }
     }
   ]
 }

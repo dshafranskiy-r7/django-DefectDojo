@@ -17,6 +17,12 @@ services:
         published: 5678
         protocol: tcp
         mode: host
+      # Debug unit tests
+      # debugpy --listen 0.0.0.0:5679 --wait-for-client manage.py test unittests.tools.test_api_snyk_importer --keepdb
+      - target: 5679
+        published: 5679
+        protocol: tcp
+        mode: host
       - target: 8000
         published: 8000
         protocol: tcp

@@ -24,20 +24,11 @@ class SnykApiImporter:
     @staticmethod
     def is_ignored(issue):
         """Check if the issue is ignored in Snyk."""
-        ignored = issue.get("ignored", False)
+        ignored = issue.get("attributes", False).get("ignored", False)
         if ignored:
             logger.debug(
                 f"Issue {issue.get('id', 'unknown')} is ignored in Snyk")
         return ignored
-
-    @staticmethod
-    def is_patched(issue):
-        """Check if the issue is patched."""
-        patched = issue.get("patched", False)
-        if patched:
-            logger.debug(
-                f"Issue {issue.get('id', 'unknown')} is patched in Snyk")
-        return patched
 
     @staticmethod
     def prepare_client(test):
