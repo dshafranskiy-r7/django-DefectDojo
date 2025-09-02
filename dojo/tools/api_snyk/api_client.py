@@ -265,6 +265,7 @@ class SnykAPI:
             raise Exception(msg)
         return f"Successfully connected to Snyk as user: {username}"
 
+    # Product -> Api Scan configuration
     def test_product_connection(self, api_scan_configuration):
         org_id = api_scan_configuration.service_key_1
         project_id = api_scan_configuration.service_key_2 or None

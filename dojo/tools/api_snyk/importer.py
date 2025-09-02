@@ -200,6 +200,7 @@ class SnykApiImporter:
                             logger.debug(f"Failed to parse CWE number from: {cls.get('id')}")
 
                 # Get CVSS score from severities (prefer Snyk source)
+                # TODO - need to work on that CVSS score
                 cvss_score = None
                 severities = issue.get("attributes", {}).get("severities", [])
                 for severity_info in severities:
@@ -214,6 +215,8 @@ class SnykApiImporter:
                     f"Extracted metadata - CWE: {cwe}, CVSS: {cvss_score}, file_path: {file_path}")
 
                 package_type = issue.get("attributes", {}).get("type", "package_vulnerability")
+                # TODO - update schema or leave it
+                # this is done so we would fit the length of field
                 if package_type == "package_vulnerability":
                     package_type = "package"
 

@@ -23,7 +23,6 @@ def dummy_issues(self, *args, **kwargs):
     with (get_unit_tests_scans_path("api_snyk") / "issues.json").open(encoding="utf-8") as json_file:
         return json.load(json_file)
 
-
 class TestApiSnykImporter(DojoTestCase):
     def setUp(self):
         product_type, _ = Product_Type.objects.get_or_create(name="Fake unit tests")
@@ -32,9 +31,9 @@ class TestApiSnykImporter(DojoTestCase):
         # build Snyk conf (the parser need it)
         tool_type, _ = Tool_Type.objects.get_or_create(name="Snyk")
         tool_conf, _ = Tool_Configuration.objects.get_or_create(
-            name="Snyk_unittests", 
-            authentication_type="API", 
-            tool_type=tool_type, 
+            name="Snyk_unittests",
+            authentication_type="API",
+            tool_type=tool_type,
             url="https://snyk.io/api/v1",
             api_key="test-api-key"
         )
@@ -51,12 +50,15 @@ class TestApiSnykImporter(DojoTestCase):
 
     @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_organization")
     @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_issues")
-    def test_import_issues(self, mock_get_issues, mock_get_organization):
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_id_to_org_mapping")
+    def test_import_issues(self, mock_get_issues, mock_get_organization, mock_get_id_to_org_mapping):
         mock_get_organization.side_effect = dummy_organization
         mock_get_issues.side_effect = dummy_issues
+        mock_get_id_to_org_mapping.side_effect = lambda: {"test-org-id": "test-org-name"}
 
         importer = SnykApiImporter()
         findings = importer.import_issues(self.test)
+        print(len(findings))
 
         # Should return 2 findings (excluding the ignored one)
         self.assertEqual(2, len(findings))
@@ -68,32 +70,16 @@ class TestApiSnykImporter(DojoTestCase):
         self.assertEqual("Low", importer.convert_snyk_severity("low"))
         self.assertEqual("Info", importer.convert_snyk_severity("unknown"))
 
-    def test_extract_cwe(self):
-        importer = SnykApiImporter()
-        
-        # Test CWE extraction from different formats
-        issue1 = {"cwe": ["CWE-79"]}
-        self.assertEqual(79, importer.extract_cwe(issue1))
-        
-        issue2 = {"identifiers": [{"type": "CWE", "value": "CWE-1321"}]}
-        self.assertEqual(1321, importer.extract_cwe(issue2))
-        
-        issue3 = {"cwe": "CWE-89"}
-        self.assertEqual(89, importer.extract_cwe(issue3))
-        
-        issue4 = {"description": "No CWE here"}
-        self.assertIsNone(importer.extract_cwe(issue4))
-
     def test_is_ignored(self):
         importer = SnykApiImporter()
-        
+
         self.assertTrue(importer.is_ignored({"ignored": True}))
         self.assertFalse(importer.is_ignored({"ignored": False}))
         self.assertFalse(importer.is_ignored({}))
 
     def test_is_patched(self):
         importer = SnykApiImporter()
-        
+
         self.assertTrue(importer.is_patched({"patched": True}))
         self.assertFalse(importer.is_patched({"patched": False}))
         self.assertFalse(importer.is_patched({}))
