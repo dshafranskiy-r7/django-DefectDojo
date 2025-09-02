@@ -1,0 +1,99 @@
+{
+	"name": "DefectDojo Development",
+	"dockerComposeFile": [
+		"../docker-compose.override.dev.yml"
+	],
+	"service": "uwsgi",
+	"workspaceFolder": "/app",
+	"shutdownAction": "stopCompose",
+	"containerEnv": {
+		"DD_UWSGI_DEBUG": "True",
+		"DD_DEBUG": "True",
+		"DD_ADMIN_PASSWORD": "admin"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.debugpy",
+				"charliermarsh.ruff",
+				"ms-vscode.vscode-json",
+				"redhat.vscode-yaml",
+				"batisteo.vscode-django",
+				"thebarkman.vscode-djaneiro",
+				"formulahendry.auto-rename-tag",
+				"esbenp.prettier-vscode",
+				"github.copilot",
+				"github.copilot-chat",
+				"ms-python.pytest",
+				"ms-vscode.test-adapter-converter"
+			],
+			"settings": {
+				"python.defaultInterpreterPath": "/usr/local/bin/python",
+				"python.linting.enabled": true,
+				"python.linting.flake8Enabled": false,
+				"python.linting.ruffEnabled": true,
+				"python.formatting.provider": "none",
+				"[python]": {
+					"editor.defaultFormatter": "charliermarsh.ruff",
+					"editor.codeActionsOnSave": {
+						"source.organizeImports": "explicit"
+					}
+				},
+				"python.testing.pytestEnabled": true,
+				"python.testing.unittestEnabled": true,
+				"python.testing.autoTestDiscoverOnSaveEnabled": true,
+				"python.testing.pytestArgs": [],
+				"python.testing.unittestArgs": [
+					"-v",
+					"-s",
+					"./unittests",
+					"-p",
+					"test_*.py"
+				],
+				"files.exclude": {
+					"**/__pycache__": true,
+					"**/*.pyc": true,
+					"**/node_modules": true,
+					"**/.pytest_cache": true,
+					"**/.coverage": true,
+					"**/htmlcov": true
+				},
+				"files.watcherExclude": {
+					"**/__pycache__/**": true,
+					"**/node_modules/**": true,
+					"**/.pytest_cache/**": true
+				},
+				"django.snippets.exclude": [
+					"cms",
+					"wagtail"
+				],
+				"python.analysis.autoImportCompletions": true,
+				"python.analysis.typeCheckingMode": "basic"
+			}
+		}
+	},
+	"forwardPorts": [8080, 5432, 6379, 8000, 5678],
+	"portsAttributes": {
+		"8080": {
+			"label": "DefectDojo Application (Nginx)",
+			"protocol": "http"
+		},
+		"5432": {
+			"label": "PostgreSQL Database"
+		},
+		"6379": {
+			"label": "Redis Cache"
+		},
+		"8000": {
+			"label": "Django Development Server",
+			"protocol": "http"
+		},
+		"5678": {
+			"label": "Python Debug Server"
+		}
+	},
+	"postCreateCommand": "bash .devcontainer/setup.sh",
+	"remoteUser": "defectdojo",
+	"workspaceFolder": "/app"
+}

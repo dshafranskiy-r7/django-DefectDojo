@@ -1,0 +1,67 @@
+{
+  "issues": [
+    {
+      "id": "SNYK-JS-LODASH-567746",
+      "title": "Prototype Pollution",
+      "type": "vuln",
+      "package": "lodash",
+      "version": "4.17.15",
+      "severity": "high",
+      "url": "https://snyk.io/vuln/SNYK-JS-LODASH-567746",
+      "description": "Affected versions of lodash are vulnerable to prototype pollution. The utilities merge, mergeWith, and defaultsDeep can be tricked into adding or modifying properties of Object.prototype. This is due to an incomplete fix to CVE-2018-3721.",
+      "from": ["package.json", "lodash@4.17.15"],
+      "cvssScore": 7.3,
+      "cwe": ["CWE-1321"],
+      "identifiers": [
+        {
+          "type": "CWE",
+          "value": "CWE-1321"
+        }
+      ],
+      "ignored": false,
+      "patched": false
+    },
+    {
+      "id": "SNYK-JS-AXIOS-2391665",
+      "title": "Regular Expression Denial of Service (ReDoS)",
+      "type": "vuln",
+      "package": "axios",
+      "version": "0.21.1",
+      "severity": "medium",
+      "url": "https://snyk.io/vuln/SNYK-JS-AXIOS-2391665",
+      "description": "Affected versions of axios are vulnerable to Regular Expression Denial of Service (ReDoS) due to improper input validation in the trim function.",
+      "from": ["package.json", "axios@0.21.1"],
+      "cvssScore": 5.3,
+      "cwe": ["CWE-1333"],
+      "identifiers": [
+        {
+          "type": "CWE",
+          "value": "CWE-1333"
+        }
+      ],
+      "ignored": false,
+      "patched": false
+    },
+    {
+      "id": "SNYK-JS-MINIMIST-559764",
+      "title": "Prototype Pollution",
+      "type": "vuln",
+      "package": "minimist",
+      "version": "1.2.0",
+      "severity": "low",
+      "url": "https://snyk.io/vuln/SNYK-JS-MINIMIST-559764",
+      "description": "Affected versions of minimist are vulnerable to prototype pollution. Arguments are not properly sanitized, allowing an attacker to modify the prototype of Object, causing the addition or modification of an existing property that will exist on all objects.",
+      "from": ["package.json", "minimist@1.2.0"],
+      "cvssScore": 3.7,
+      "cwe": ["CWE-1321"],
+      "identifiers": [
+        {
+          "type": "CWE",
+          "value": "CWE-1321"
+        }
+      ],
+      "ignored": true,
+      "patched": false
+    }
+  ]
+}

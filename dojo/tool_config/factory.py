@@ -3,6 +3,7 @@ from dojo.tools.api_bugcrowd.api_client import BugcrowdAPI
 from dojo.tools.api_cobalt.api_client import CobaltAPI
 from dojo.tools.api_edgescan.api_client import EdgescanAPI
 from dojo.tools.api_sonarqube.api_client import SonarQubeAPI
+from dojo.tools.api_snyk.api_client import SnykAPI
 from dojo.tools.api_vulners.api_client import VulnersAPI
 
 SCAN_APIS = {
@@ -11,6 +12,7 @@ SCAN_APIS = {
                 "Cobalt.io": CobaltAPI,
                 "Edgescan": EdgescanAPI,
                 "SonarQube": SonarQubeAPI,
+                "Snyk": SnykAPI,
                 "Vulners": VulnersAPI,
              }
 
