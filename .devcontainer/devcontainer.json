@@ -1,7 +1,6 @@
 {
 	"name": "DefectDojo Development",
 	"dockerComposeFile": [
-		"../docker-compose.yml",
 		"../docker-compose.override.dev.yml"
 	],
 	"service": "uwsgi",
