@@ -1,23 +1,25 @@
 # DefectDojo DevContainer
 
-This DevContainer configuration provides a complete development environment for DefectDojo with all necessary dependencies and services pre-configured.
+This DevContainer configuration provides a complete development environment for DefectDojo using the project's existing Docker infrastructure.
 
 ## What's Included
 
-### Services
-- **Development Container**: Python 3.11 with all DefectDojo dependencies
+### Architecture
+- **Uses existing Docker setup**: Leverages `docker-compose.yml` + `docker-compose.override.dev.yml`
+- **DefectDojo Django container**: Based on the official `Dockerfile.django-debian` 
 - **PostgreSQL**: Database service for DefectDojo
 - **Redis**: Cache and message broker service
+- **Nginx**: Reverse proxy (available at port 8080)
 
-### Development Tools
-- Python 3.11.11
-- All Python dependencies from `requirements.txt` and `requirements-lint.txt`
-- Debug tools: `debugpy`, `ipdb`
-- Development tools: `jupyter`
+### Development Features
+- **Integrated debugging**: Uses `docker/entrypoint-uwsgi-dev.sh` with debugpy on port 5678
+- **Hot reloading**: Code changes automatically reflected
+- **Volume mounting**: Live code editing with `.:/app:z` mount
+- **Debug mode**: `DD_DEBUG=True` and `DD_UWSGI_DEBUG=True` enabled
 
 ### VS Code Extensions
 - Python support with debugging
-- Django support and snippets
+- Django support and snippets  
 - Ruff linting and formatting
 - Git and GitHub Copilot
 - Additional helpful extensions for web development
@@ -36,31 +38,38 @@ This DevContainer configuration provides a complete development environment for 
    - When prompted, click "Reopen in Container" or use the Command Palette (`Ctrl+Shift+P`) and select "Dev Containers: Reopen in Container"
 
 2. **Wait for Setup**
-   - The initial setup may take a few minutes to build the container and install dependencies
-   - The post-create script will automatically run to set up the environment
+   - The initial setup uses the existing DefectDojo Docker infrastructure
+   - All services (PostgreSQL, Redis, Django) will start automatically
+   - The development server starts with debugpy enabled on port 5678
 
-3. **Start Development**
-   ```bash
-   # Run database migrations
-   python manage.py migrate
-   
-   # Create a superuser
-   python manage.py createsuperuser
-   
-   # Start the development server
-   python manage.py runserver 0.0.0.0:8000
-   ```
+3. **Access the Application**
+   - Django development server: http://localhost:8000
+   - Full application with Nginx: http://localhost:8080
+   - Default credentials: admin/admin
+## Debugging
 
-4. **Access the Application**
-   - Open http://localhost:8000 in your browser
-   - Log in with the superuser credentials you created
+The DevContainer leverages DefectDojo's built-in debugging infrastructure:
+
+### Remote Debugging (Recommended)
+- **Debugpy server**: Automatically started on port 5678
+- **VS Code configuration**: Use "Debug DefectDojo (Remote original)" launch configuration
+- **How it works**: 
+  1. The `DD_UWSGI_DEBUG=True` environment variable triggers debugpy mode
+  2. `docker/entrypoint-uwsgi-dev.sh` runs: `debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000`
+  3. VS Code connects to the remote debugpy session for full debugging
+
+### Alternative Debugging
+- Use other provided launch configurations for local debugging
+- Set breakpoints in your Python code
+- Use "Django: Debug Tests" to debug test cases
 
 ## Available Services
 
 The devcontainer includes these services accessible on localhost:
 
-- **Port 8000**: Django development server
-- **Port 8080**: DefectDojo application (when using Docker Compose)
+- **Port 5678**: Python debugpy server (for remote debugging)
+- **Port 8000**: Django development server  
+- **Port 8080**: Full DefectDojo application via Nginx
 - **Port 5432**: PostgreSQL database
 - **Port 6379**: Redis cache
 
@@ -75,15 +84,10 @@ The devcontainer includes these services accessible on localhost:
 ./run-integration-tests.sh --test-case "tests/finding_test.py"
 ```
 
-### Debugging
-- Use VS Code's built-in debugger with the provided launch configurations
-- Set breakpoints in your Python code
-- Use the "Django: Debug Server" configuration to debug the web application
-- Use "Django: Debug Tests" to debug test cases
-
 ### Database Operations
 ```bash
-# Run migrations
+# Migrations are automatically run during container startup
+# To run additional migrations:
 python manage.py migrate
 
 # Create migrations
@@ -92,7 +96,7 @@ python manage.py makemigrations
 # Access Django shell
 python manage.py shell
 
-# Access database shell
+# Access database shell  
 python manage.py dbshell
 ```
 

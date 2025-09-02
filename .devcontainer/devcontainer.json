@@ -1,11 +1,16 @@
 {
 	"name": "DefectDojo Development",
-	"dockerComposeFile": "docker-compose.yml",
-	"service": "devcontainer",
-	"workspaceFolder": "/workspaces/django-DefectDojo",
+	"dockerComposeFile": [
+		"../docker-compose.yml",
+		"../docker-compose.override.dev.yml"
+	],
+	"service": "uwsgi",
+	"workspaceFolder": "/app",
 	"shutdownAction": "stopCompose",
 	"containerEnv": {
-		"PYTHONPATH": "/workspaces/django-DefectDojo"
+		"DD_UWSGI_DEBUG": "True",
+		"DD_DEBUG": "True",
+		"DD_ADMIN_PASSWORD": "admin"
 	},
 	"customizations": {
 		"vscode": {
@@ -69,10 +74,10 @@
 			}
 		}
 	},
-	"forwardPorts": [8080, 5432, 6379, 8000, 3000],
+	"forwardPorts": [8080, 5432, 6379, 8000, 5678],
 	"portsAttributes": {
 		"8080": {
-			"label": "DefectDojo Application",
+			"label": "DefectDojo Application (Nginx)",
 			"protocol": "http"
 		},
 		"5432": {
@@ -85,12 +90,11 @@
 			"label": "Django Development Server",
 			"protocol": "http"
 		},
-		"3000": {
-			"label": "Django Debug Server",
-			"protocol": "http"
+		"5678": {
+			"label": "Python Debug Server"
 		}
 	},
 	"postCreateCommand": "bash .devcontainer/setup.sh",
-	"remoteUser": "vscode",
-	"workspaceFolder": "/workspaces/django-DefectDojo"
+	"remoteUser": "defectdojo",
+	"workspaceFolder": "/app"
 }
