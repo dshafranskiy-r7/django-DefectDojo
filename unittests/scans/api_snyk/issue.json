@@ -1,0 +1,23 @@
+{
+  "issue": {
+    "id": "SNYK-JS-LODASH-567746",
+    "title": "Prototype Pollution",
+    "type": "vuln",
+    "package": "lodash",
+    "version": "4.17.15",
+    "severity": "high",
+    "url": "https://snyk.io/vuln/SNYK-JS-LODASH-567746",
+    "description": "Affected versions of lodash are vulnerable to prototype pollution. The utilities merge, mergeWith, and defaultsDeep can be tricked into adding or modifying properties of Object.prototype. This is due to an incomplete fix to CVE-2018-3721.",
+    "from": ["package.json", "lodash@4.17.15"],
+    "cvssScore": 7.3,
+    "cwe": ["CWE-1321"],
+    "identifiers": [
+      {
+        "type": "CWE",
+        "value": "CWE-1321"
+      }
+    ],
+    "ignored": false,
+    "patched": false
+  }
+}
