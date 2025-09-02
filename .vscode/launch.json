@@ -19,6 +19,23 @@
             "redirectOutput": true
         },
         {
+
+            "name": "Debug DefectDojo (Local Tests)",
+            "type": "python",
+            "request": "attach",
+            "port": 5679,
+            "host": "localhost",
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "/app"
+                }
+            ],
+            "justMyCode": false,
+            "django": true,
+            "redirectOutput": true
+        },
+        {
             "name": "Django: Debug Server",
             "type": "debugpy",
             "request": "launch",
