@@ -5,7 +5,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dojo', '0241_snyk_issue_finding_snyk_issue_snyk_issue_transition'),
+        ('dojo', '1001_snyk_issue_finding_snyk_issue_snyk_issue_transition'),
     ]
 
     operations = [

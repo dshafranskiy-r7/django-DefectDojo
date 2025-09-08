@@ -19,7 +19,7 @@ def rollback_collation(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('dojo', '0240_jira_instance_password_help_text_fix'),
+        ('dojo', '0242_file_upload_cleanup'),
     ]
 
     operations = [

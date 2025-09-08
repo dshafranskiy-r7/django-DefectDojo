@@ -134,25 +134,36 @@ class SnykAPI:
         """
         Get issues for an organization or specific project.
         """
-        url = f"{self.snyk_api_url}/orgs/{org_id}/issues?version={snyk_api_version}"
+        next = f"{self.snyk_api_url}/orgs/{org_id}/issues?version={snyk_api_version}&limit=100&ignored=false"
         logger.debug(f"Fetching issues for organization {org_id}")
 
-        # TODO - DIMI - paginate over all inssues
-        response = self.session.get(
-            url=url,
-            headers=self.default_headers,
-            timeout=settings.REQUESTS_TIMEOUT,
-        )
+        issues_data = []
+        pages = 0
 
-        if not response.ok:
-            logger.error(f"Failed to get issues: {response.status_code} - {response.content.decode('utf-8')}")
-            msg = (
-                f"Unable to get issues for {'project ' + project_id if project_id else 'organization'} "
-                f'due to {response.status_code} - {response.content.decode("utf-8")}'
+        while True:
+            response = self.session.get(
+                url=next,
+                headers=self.default_headers,
+                timeout=settings.REQUESTS_TIMEOUT,
             )
-            raise Exception(msg)
 
-        issues_data = response.json().get("data", [])
+            if not response.ok:
+                logger.error(f"Failed to get issues: {response.status_code} - {response.content.decode('utf-8')}")
+                msg = (
+                    f"Unable to get issues for {'project ' + project_id if project_id else 'organization'} "
+                    f'due to {response.status_code} - {response.content.decode("utf-8")}'
+                )
+                raise Exception(msg)
+
+            issues_data.extend(response.json().get("data", []))
+
+            if "next" in response.json()["links"]:
+                next = response.json()["links"]["next"]
+                pages = pages + 1
+            else:
+                break
+
+
         scope = f"project {project_id}" if project_id else f"organization {org_id}"
         logger.info(f"Retrieved {len(issues_data)} issues for {scope}")
         logger.debug(f"Issue types: {list(set(issue.get('type', 'unknown') for issue in issues_data))}")
