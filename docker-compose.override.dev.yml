@@ -35,12 +35,14 @@ services:
       PYTHONWARNINGS: error  # We are strict about Warnings during development
       DD_DEBUG: 'True'
       DD_EMAIL_URL: "smtp://mailhog:1025"
+      DD_CELERY_LOG_LEVEL: "DEBUG"
   celerybeat:
     volumes:
       - '.:/app:z'
     environment:
       PYTHONWARNINGS: error  # We are strict about Warnings during development
       DD_DEBUG: 'True'
+      DD_CELERY_LOG_LEVEL: "DEBUG"
   initializer:
     volumes:
       - '.:/app:z'
