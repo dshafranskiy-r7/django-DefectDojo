@@ -790,7 +790,7 @@ def get_excludes():
 
 def get_foreign_keys():
     return ["defect_review_requested_by", "duplicate_finding", "finding_group", "last_reviewed_by",
-        "mitigated_by", "reporter", "review_requested_by", "sonarqube_issue", "test"]
+        "mitigated_by", "reporter", "review_requested_by", "snyk_issue", "sonarqube_issue", "test"]
 
 
 def get_attributes():

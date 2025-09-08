@@ -14,23 +14,19 @@ from dojo.tools.api_snyk.parser import ApiSnykParser
 from unittests.dojo_test_case import DojoTestCase, get_unit_tests_scans_path
 
 
-def dummy_organization(self, *args, **kwargs):
-    with (get_unit_tests_scans_path("api_snyk") / "organization.json").open(encoding="utf-8") as json_file:
-        return json.load(json_file)
+def dummy_organization(*args, **kwargs):
+    return { "org": { "id": "test-org-id", "name": "test-org-name" } }
 
 
-def dummy_issues(self, *args, **kwargs):
+def dummy_issues(*args, **kwargs):
     with (get_unit_tests_scans_path("api_snyk") / "issues.json").open(encoding="utf-8") as json_file:
         return json.load(json_file)
 
-
-def dummy_issue(self, *args, **kwargs):
-    with (get_unit_tests_scans_path("api_snyk") / "issue.json").open(encoding="utf-8") as json_file:
-        return json.load(json_file)
-
-
-def empty_list(self, *args, **kwargs):
+def empty_list(*args, **kwargs):
     return []
+
+def dummy_mapping(*args, **kwargs):
+    return {"test-org-id": "test-org-name"}
 
 
 class TestApiSnykParser(DojoTestCase):
@@ -41,9 +37,9 @@ class TestApiSnykParser(DojoTestCase):
         # build Snyk conf (the parser need it)
         tool_type, _ = Tool_Type.objects.get_or_create(name="Snyk")
         tool_conf, _ = Tool_Configuration.objects.get_or_create(
-            name="Snyk_unittests", 
-            authentication_type="API", 
-            tool_type=tool_type, 
+            name="Snyk_unittests",
+            authentication_type="API",
+            tool_type=tool_type,
             url="https://snyk.io/api/v1",
             api_key="test-api-key"
         )
@@ -88,11 +84,12 @@ class TestApiSnykParser(DojoTestCase):
         self.assertIn("Service key 1", hint)
         self.assertIn("organization ID", hint)
 
-    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_organization")
     @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_issues")
-    def test_get_findings(self, mock_get_issues, mock_get_organization):
-        mock_get_organization.side_effect = dummy_organization
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_id_to_org_mapping")
+    def test_get_findings(self, mock_get_id_to_org_mapping, mock_get_issues):
         mock_get_issues.side_effect = dummy_issues
+        mock_get_id_to_org_mapping.side_effect = dummy_mapping
+        # mock_get_organization.side_effect = dummy_organization
 
         parser = ApiSnykParser()
         findings = parser.get_findings(None, self.test)
@@ -124,11 +121,11 @@ class TestApiSnykParser(DojoTestCase):
         self.assertTrue(finding.static_finding)
         self.assertFalse(finding.false_p)
 
-    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_organization")
     @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_issues")
-    def test_get_findings_empty(self, mock_get_issues, mock_get_organization):
-        mock_get_organization.side_effect = dummy_organization
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_id_to_org_mapping")
+    def test_get_findings_empty(self, mock_get_id_to_org_mapping, mock_get_issues):
         mock_get_issues.return_value = {"issues": []}
+        mock_get_id_to_org_mapping.side_effect = dummy_mapping
 
         parser = ApiSnykParser()
         findings = parser.get_findings(None, self.test)

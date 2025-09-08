@@ -137,6 +137,7 @@ class SnykAPI:
         url = f"{self.snyk_api_url}/orgs/{org_id}/issues?version={snyk_api_version}"
         logger.debug(f"Fetching issues for organization {org_id}")
 
+        # TODO - DIMI - paginate over all inssues
         response = self.session.get(
             url=url,
             headers=self.default_headers,

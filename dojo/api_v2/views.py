@@ -129,6 +129,8 @@ from dojo.models import (
     Risk_Acceptance,
     Role,
     SLA_Configuration,
+    Snyk_Issue,
+    Snyk_Issue_Transition,
     Sonarqube_Issue,
     Sonarqube_Issue_Transition,
     Stub_Finding,
@@ -1573,6 +1575,38 @@ class JiraProjectViewSet(
     def get_queryset(self):
         return get_authorized_jira_projects(Permissions.Product_View)
 
+# Authorization: superuser
+class SnykIssueViewSet(
+    DojoModelViewSet,
+):
+    serializer_class = serializers.SnykIssueSerializer
+    queryset = Snyk_Issue.objects.none()
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ["id", "key", "status", "type"]
+    permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+
+    def get_queryset(self):
+        return Snyk_Issue.objects.all().order_by("id")
+
+
+# Authorization: superuser
+class SnykIssueTransitionViewSet(
+    DojoModelViewSet,
+):
+    serializer_class = serializers.SnykIssueTransitionSerializer
+    queryset = Snyk_Issue_Transition.objects.none()
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = [
+        "id",
+        "snyk_issue",
+        "finding_status",
+        "snyk_status",
+        "transitions",
+    ]
+    permission_classes = (permissions.IsSuperUser, DjangoModelPermissions)
+
+    def get_queryset(self):
+        return Snyk_Issue_Transition.objects.all().order_by("id")
 
 # Authorization: superuser
 class SonarqubeIssueViewSet(

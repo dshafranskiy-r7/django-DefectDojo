@@ -1556,7 +1556,7 @@ class FindingForm(forms.ModelForm):
     class Meta:
         model = Finding
         exclude = ("reporter", "url", "numerical_severity", "under_review", "reviewers", "cve", "inherited_tags",
-                   "review_requested_by", "is_mitigated", "jira_creation", "jira_change", "sonarqube_issue", "endpoint_status")
+                   "review_requested_by", "is_mitigated", "jira_creation", "jira_change", "snyk_issue", "sonarqube_issue", "endpoint_status")
 
 
 class StubFindingForm(forms.ModelForm):
