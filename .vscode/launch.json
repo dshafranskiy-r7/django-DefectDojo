@@ -3,7 +3,7 @@
     "configurations": [
         {
 
-            "name": "Debug DefectDojo (Remote original)",
+            "name": "DefectDojo (uwsgi service)",
             "type": "python",
             "request": "attach",
             "port": 5678,
@@ -20,7 +20,7 @@
         },
         {
 
-            "name": "Debug DefectDojo (Local Tests)",
+            "name": "DefectDojo (Local Tests)",
             "type": "python",
             "request": "attach",
             "port": 5679,
@@ -35,74 +35,22 @@
             "django": true,
             "redirectOutput": true
         },
-        {
-            "name": "Django: Debug Server",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/manage.py",
-            "args": [
-                "runserver",
-                "0.0.0.0:8000",
-                "--noreload"
+                {
+
+            "name": "DefectDojo (Celery Worker)",
+            "type": "python",
+            "request": "attach",
+            "port": 5680,
+            "host": "localhost",
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}",
+                    "remoteRoot": "/app"
+                }
             ],
-            "env": {
-                "DJANGO_SETTINGS_MODULE": "dojo.settings.settings",
-                "DD_DEBUG": "True"
-            },
+            "justMyCode": false,
             "django": true,
-            "autoReload": {
-                "enable": true
-            },
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}",
-            "justMyCode": false
-        },
-        {
-            "name": "Django: Debug Tests",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/manage.py",
-            "args": [
-                "test",
-                "--debug-mode"
-            ],
-            "env": {
-                "DJANGO_SETTINGS_MODULE": "dojo.settings.unittests"
-            },
-            "django": true,
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}",
-            "justMyCode": false
-        },
-        {
-            "name": "Django: Debug Single Test",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/manage.py",
-            "args": [
-                "test",
-                "${input:testCase}",
-                "--debug-mode"
-            ],
-            "env": {
-                "DJANGO_SETTINGS_MODULE": "dojo.settings.unittests"
-            },
-            "django": true,
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}",
-            "justMyCode": false
-        },
-        {
-            "name": "Python: Current File",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}",
-                "DJANGO_SETTINGS_MODULE": "dojo.settings.settings"
-            }
+            "redirectOutput": true
         }
     ],
     "inputs": [

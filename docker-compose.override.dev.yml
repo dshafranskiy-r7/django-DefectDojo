@@ -31,6 +31,11 @@ services:
     entrypoint: ['/wait-for-it.sh', '${DD_DATABASE_HOST:-postgres}:${DD_DATABASE_PORT:-5432}', '-t', '30', '--', '/entrypoint-celery-worker-dev.sh']
     volumes:
       - '.:/app:z'
+    ports:
+      - target: 5680
+        published: 5680
+        protocol: tcp
+        mode: host
     environment:
       PYTHONWARNINGS: error  # We are strict about Warnings during development
       DD_DEBUG: 'True'
