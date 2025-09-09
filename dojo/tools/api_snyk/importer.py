@@ -104,8 +104,6 @@ class SnykApiImporter:
                 f"Found {len(issues)} issues for {'project ' + project_id if project_id else 'organization ' + org_id}",
             )
 
-            org_mapping = client.get_id_to_org_mapping()
-
             for issue in issues:
                 issue_id = issue.get("id")
                 logger.debug(f"Processing issue: {issue_id}")
@@ -117,8 +115,9 @@ class SnykApiImporter:
 
                 key = issue["attributes"]["key"]
                 project = issue["relationships"]["scan_item"]["data"]["id"]
-                org_name = org_mapping.get(org_id, "unknown_org")
+                org_name = client.get_id_to_org_mapping().get(org_id, "unknown_org")
 
+                # TODO - this one is different from default one
                 issue_url = f"https://app.snyk.io/org/{org_name}/project/{project}#issue-{key}"
 
                 # Get detailed issue information

@@ -1,3 +1,4 @@
+from enum import Enum
 import logging
 import requests
 from django.conf import settings
@@ -11,6 +12,13 @@ logger = logging.getLogger(__name__)
 # TODO - move to API config params
 snyk_api_version="2024-10-15"
 
+class IGNORE_TYPE(Enum):
+    NOT_VULNERABLE = "not-vulnerable"
+    IGNORE_PERMANENTLY = "temporary-ignore" # also needs date, not implemented
+    WONT_FIX = "wont-fix"
+    FIXED = "fixed" # TODO DIMI - does not exist
+    OTHER = "other" # TODO DIMI - does not exist
+
 class SnykAPI:
     def __init__(self, tool_config):
         logger.debug(f"Initializing Snyk API client with URL: {tool_config.url}")
@@ -20,20 +28,26 @@ class SnykAPI:
             "authorization": tool_config.api_key,
             "accept": "application/vnd.api+json"
         }
+        self.v1_headers = {
+            "Authorization": f"Token {tool_config.api_key}",
+            "Content-Type": "application/json"
+        }
+
         self.snyk_api_url = tool_config.url.rstrip("/")
-        # not sure if this is necessary though
-        if not self.snyk_api_url.endswith("/rest"):
-            self.snyk_api_url += "/rest"
+
+        self.org_to_id_mapping_cache = {}
 
         logger.debug(f"Snyk API URL configured as: {self.snyk_api_url}")
 
-    # TODO - this might only run once
-    def get_id_to_org_mapping(self):
-        url = f"/orgs?version={snyk_api_version}"
-        response = requests.get(self.snyk_api_url + url, headers=self.default_headers)
-        response.raise_for_status()
 
-        return {item["id"]: item["attributes"]["slug"] for item in response.json()["data"]}
+    # TODO - find a way how to run this only once
+    def get_id_to_org_mapping(self):
+        if not self.org_to_id_mapping_cache:
+            response = requests.get(f"{self.snyk_api_url}/rest/orgs?version={snyk_api_version}", headers=self.default_headers)
+            response.raise_for_status()
+            self.org_to_id_mapping_cache = {item["id"]: item["attributes"]["slug"] for item in response.json()["data"]}
+
+        return self.org_to_id_mapping_cache
 
     def get_organizations(self):
         """
@@ -41,7 +55,7 @@ class SnykAPI:
         """
         logger.debug("Fetching organizations from Snyk API")
         response = self.session.get(
-            url=f"{self.snyk_api_url}/orgs",
+            url=f"{self.snyk_api_url}/rest/orgs",
             headers=self.default_headers,
             timeout=settings.REQUESTS_TIMEOUT,
         )
@@ -65,7 +79,7 @@ class SnykAPI:
         """
         logger.debug(f"Fetching organization details for ID: {org_id}")
         response = self.session.get(
-            url=f"{self.snyk_api_url}/orgs/{org_id}?version={snyk_api_version}",
+            url=f"{self.snyk_api_url}/rest/orgs/{org_id}?version={snyk_api_version}",
             headers=self.default_headers,
             timeout=settings.REQUESTS_TIMEOUT,
         )
@@ -90,7 +104,7 @@ class SnykAPI:
         logger.debug(f"Fetching projects for organization: {org_id}")
 
         response = self.session.get(
-            url=f"{self.snyk_api_url}/orgs/{org_id}/projects?version={snyk_api_version}&meta_count=only",
+            url=f"{self.snyk_api_url}/rest/orgs/{org_id}/projects?version={snyk_api_version}&meta_count=only",
             headers=self.default_headers,
             timeout=settings.REQUESTS_TIMEOUT,
         )
@@ -113,7 +127,7 @@ class SnykAPI:
         """
         logger.debug(f"Fetching project details for ID: {project_id} in organization: {org_id}")
         response = self.session.get(
-            url=f"{self.snyk_api_url}/org/{org_id}/project/{project_id}",
+            url=f"{self.snyk_api_url}/rest/org/{org_id}/project/{project_id}",
             headers=self.default_headers,
             timeout=settings.REQUESTS_TIMEOUT,
         )
@@ -134,7 +148,7 @@ class SnykAPI:
         """
         Get issues for an organization or specific project.
         """
-        next = f"{self.snyk_api_url}/orgs/{org_id}/issues?version={snyk_api_version}&limit=100&ignored=false"
+        next = f"{self.snyk_api_url}/rest/orgs/{org_id}/issues?version={snyk_api_version}&limit=100&ignored=false"
         logger.debug(f"Fetching issues for organization {org_id}")
 
         issues_data = []
@@ -173,9 +187,9 @@ class SnykAPI:
         """
         Get details of a specific issue.
         """
-        logger.debug(f"Fetching issue details for ID: {issue_id} in organization: {org_id}")
+        logger.debug(f"Fetching Snyk issue details for ID: {issue_id} in organization: {org_id}")
         response = self.session.get(
-            url=f"{self.snyk_api_url}/org/{org_id}/issue/{issue_id}",
+            url=f"{self.snyk_api_url}/rest/orgs/{org_id}/issues/{issue_id}?version={snyk_api_version}",
             headers=self.default_headers,
             timeout=settings.REQUESTS_TIMEOUT,
         )
@@ -188,68 +202,69 @@ class SnykAPI:
             )
             raise Exception(msg)
 
-        issue_data = response.json().get("issue")
+        issue_data = response.json().get("data", {})
         logger.debug(f"Retrieved issue: {issue_data.get('title', issue_id) if issue_data else 'None'}")
         return issue_data
 
-    def ignore_issue(self, org_id, issue_id, reason="false-positive", notes=""):
+    def ignore_issue(self, org_name, project_id, issue_name, reason, notes=""):
         """
         Ignore an issue (mark as false positive or won't fix).
         """
-        logger.debug(f"Ignoring issue {issue_id} with reason: {reason}")
+        logger.debug(f"Ignoring issue {issue_name} with reason: {reason} and notes: {notes}")
         data = {
-            "ignorePath": "*",
-            "reason": reason,
-            "reasonType": "not-vulnerable" if reason == "false-positive" else "wont-fix",
+            "reasonType": reason,
+            "reason": notes,
+            "disregardIfFixable": False
+            #"expires":"{expiration_date}T00:00:00.000Z"
         }
-        if notes:
-            data["disregardIfFixable"] = False
-            data["notes"] = notes
-            logger.debug(f"Adding notes to ignore action: {notes}")
+
+        # TODO DIMI - also different endpint than default one, with different headers
+
 
         response = self.session.post(
-            url=f"{self.snyk_api_url}/org/{org_id}/project/{issue_id}/ignore/*",
-            headers=self.default_headers,
+            url=f"https://snyk.io/api/v1/org/{org_name}/project/{project_id}/ignore/{issue_name}",
+            headers=self.v1_headers,
             json=data,
             timeout=settings.REQUESTS_TIMEOUT,
         )
 
         if not response.ok:
-            logger.error(f"Failed to ignore issue {issue_id}: {response.status_code} - {response.content.decode('utf-8')}")
+            logger.error(f"Failed to ignore issue {issue_name}: {response.status_code} - {response.content.decode('utf-8')}")
             msg = (
-                f"Unable to ignore issue {issue_id} "
+                f"Unable to ignore issue {issue_name} "
                 f'due to {response.status_code} - {response.content.decode("utf-8")}'
             )
             raise Exception(msg)
 
-        logger.info(f"Successfully ignored issue {issue_id} with reason: {reason}")
+        logger.info(f"Successfully ignored issue {issue_name} with reason: {reason}")
 
-    def unignore_issue(self, org_id, issue_id):
+    def unignore_issue(self, org_name, project_id, issue_name):
         """
         Unignore an issue.
         """
-        logger.debug(f"Unignoring issue {issue_id}")
+        logger.debug(f"Unignoring issue {issue_name}")
+        # TODO DIMI - also different endpint than default one, with different headers
         response = self.session.delete(
-            url=f"{self.snyk_api_url}/org/{org_id}/project/{issue_id}/ignore/*",
-            headers=self.default_headers,
+            url=f"https://snyk.io/api/v1/org/{org_name}/project/{project_id}/ignore/{issue_name}",
+            headers=self.v1_headers,
             timeout=settings.REQUESTS_TIMEOUT,
         )
 
         if not response.ok:
-            logger.error(f"Failed to unignore issue {issue_id}: {response.status_code} - {response.content.decode('utf-8')}")
+            logger.error(f"Failed to unignore issue {issue_name}: {response.status_code} - {response.content.decode('utf-8')}")
             msg = (
-                f"Unable to unignore issue {issue_id} "
+                f"Unable to unignore issue {issue_name} "
                 f'due to {response.status_code} - {response.content.decode("utf-8")}'
             )
             raise Exception(msg)
 
-        logger.info(f"Successfully unignored issue {issue_id}")
+        logger.info(f"Successfully unignored issue {issue_name}")
 
     def test_connection(self):
         """Returns user information or raise error."""
         logger.debug("Testing Snyk API connection")
         response = self.session.get(
-            url=f"{self.snyk_api_url}/self?version={snyk_api_version}",
+            url=f"{self.snyk_api_url}/rest/self?version={snyk_api_version}",
             headers=self.default_headers,
             timeout=settings.REQUESTS_TIMEOUT,
         )
