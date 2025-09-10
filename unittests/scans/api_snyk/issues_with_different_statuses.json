@@ -1,0 +1,193 @@
+{
+  "data": [
+    {
+      "id": "open-issue-1",
+      "type": "issue",
+      "attributes": {
+        "classes": [
+          {
+            "id": "CWE-79",
+            "source": "CWE",
+            "type": "weakness"
+          }
+        ],
+        "coordinates": [
+          {
+            "representations": [
+              {
+                "dependency": {
+                  "package_name": "lodash",
+                  "package_version": "4.17.15"
+                }
+              }
+            ]
+          }
+        ],
+        "created_at": "2025-01-01T00:00:00.000Z",
+        "effective_severity_level": "high",
+        "ignored": false,
+        "key": "SNYK-JS-LODASH-567746",
+        "problems": [
+          {
+            "id": "CVE-2021-23337",
+            "source": "NVD",
+            "type": "vulnerability",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-23337"
+          }
+        ],
+        "severities": [
+          {
+            "level": "high",
+            "score": 7.2,
+            "source": "Snyk",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          }
+        ],
+        "status": "open",
+        "title": "Prototype Pollution",
+        "type": "package_vulnerability"
+      },
+      "relationships": {
+        "organization": {
+          "data": {
+            "id": "test-org-id",
+            "type": "organization"
+          }
+        },
+        "scan_item": {
+          "data": {
+            "id": "test-project-id",
+            "type": "project"
+          }
+        }
+      }
+    },
+    {
+      "id": "resolved-issue-1",
+      "type": "issue",
+      "attributes": {
+        "classes": [
+          {
+            "id": "CWE-1333",
+            "source": "CWE",
+            "type": "weakness"
+          }
+        ],
+        "coordinates": [
+          {
+            "representations": [
+              {
+                "dependency": {
+                  "package_name": "axios",
+                  "package_version": "0.21.1"
+                }
+              }
+            ]
+          }
+        ],
+        "created_at": "2025-01-01T00:00:00.000Z",
+        "effective_severity_level": "medium",
+        "ignored": false,
+        "key": "SNYK-JS-AXIOS-2391665",
+        "problems": [
+          {
+            "id": "CVE-2022-0155",
+            "source": "NVD",
+            "type": "vulnerability",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2022-0155"
+          }
+        ],
+        "severities": [
+          {
+            "level": "medium",
+            "score": 5.3,
+            "source": "Snyk",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+            "version": "3.1"
+          }
+        ],
+        "status": "resolved",
+        "title": "Regular Expression Denial of Service (ReDoS)",
+        "type": "package_vulnerability"
+      },
+      "relationships": {
+        "organization": {
+          "data": {
+            "id": "test-org-id",
+            "type": "organization"
+          }
+        },
+        "scan_item": {
+          "data": {
+            "id": "test-project-id",
+            "type": "project"
+          }
+        }
+      }
+    },
+    {
+      "id": "ignored-issue-1",
+      "type": "issue",
+      "attributes": {
+        "classes": [
+          {
+            "id": "CWE-1321",
+            "source": "CWE",
+            "type": "weakness"
+          }
+        ],
+        "coordinates": [
+          {
+            "representations": [
+              {
+                "dependency": {
+                  "package_name": "minimist",
+                  "package_version": "1.2.0"
+                }
+              }
+            ]
+          }
+        ],
+        "created_at": "2025-01-01T00:00:00.000Z",
+        "effective_severity_level": "critical",
+        "ignored": true,
+        "key": "SNYK-JS-MINIMIST-559764",
+        "problems": [
+          {
+            "id": "CVE-2020-7598",
+            "source": "NVD",
+            "type": "vulnerability",
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-7598"
+          }
+        ],
+        "severities": [
+          {
+            "level": "critical",
+            "score": 9.8,
+            "source": "Snyk",
+            "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+            "version": "3.1"
+          }
+        ],
+        "status": "open",
+        "title": "Prototype Pollution",
+        "type": "package_vulnerability"
+      },
+      "relationships": {
+        "organization": {
+          "data": {
+            "id": "test-org-id",
+            "type": "organization"
+          }
+        },
+        "scan_item": {
+          "data": {
+            "id": "test-project-id",
+            "type": "project"
+          }
+        }
+      }
+    }
+  ]
+}
