@@ -1539,6 +1539,7 @@ class ApiFindingFilter(DojoFilter):
     review_requested_by = NumberInFilter(field_name="review_requested_by", lookup_expr="in")
     reviewers = NumberInFilter(field_name="reviewers", lookup_expr="in")
     sast_source_line = NumberInFilter(field_name="sast_source_line", lookup_expr="in")
+    snyk_issue = NumberInFilter(field_name="snyk_issue", lookup_expr="in")
     sonarqube_issue = NumberInFilter(field_name="sonarqube_issue", lookup_expr="in")
     test__test_type = NumberInFilter(field_name="test__test_type", lookup_expr="in", label="Test Type")
     test__engagement = NumberInFilter(field_name="test__engagement", lookup_expr="in")
@@ -3124,7 +3125,7 @@ class ReportFindingFilterHelper(FilterSet):
         model = Finding
         # exclude sonarqube issue as by default it will show all without checking permissions
         exclude = ["date", "cwe", "url", "description", "mitigation", "impact",
-                   "references", "sonarqube_issue", "duplicate_finding",
+                   "references", "snyk_issue", "sonarqube_issue", "duplicate_finding",
                    "thread_id", "notes", "inherited_tags", "endpoints",
                    "numerical_severity", "reporter", "last_reviewed",
                    "jira_creation", "jira_change", "files"]

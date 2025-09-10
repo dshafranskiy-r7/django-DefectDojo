@@ -1260,6 +1260,7 @@ HASHCODE_FIELDS_PER_SCANNER = {
     "Checkmarx OSA": ["vulnerability_ids", "component_name"],
     "Cloudsploit Scan": ["title", "description"],
     "Coverity Scan JSON Report": ["title", "cwe", "line", "file_path", "description"],
+    "Snyk Scan": ["vuln_id_from_tool", "file_path", "component_name", "component_version"], # TODO DIMI - check this ?
     "SonarQube Scan": ["cwe", "severity", "file_path"],
     "SonarQube API Import": ["title", "file_path", "line"],
     "Sonatype Application Scan": ["title", "cwe", "file_path", "component_name", "component_version", "vulnerability_ids"],

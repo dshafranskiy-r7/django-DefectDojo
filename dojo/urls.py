@@ -59,6 +59,8 @@ from dojo.api_v2.views import (
     RiskAcceptanceViewSet,
     RoleViewSet,
     SLAConfigurationViewset,
+    SnykIssueTransitionViewSet,
+    SnykIssueViewSet,
     SonarqubeIssueTransitionViewSet,
     SonarqubeIssueViewSet,
     StubFindingsViewSet,
@@ -162,6 +164,8 @@ v2_api.register(r"request_response_pairs", BurpRawRequestResponseViewSet, basena
 v2_api.register(r"risk_acceptance", RiskAcceptanceViewSet, basename="risk_acceptance")
 v2_api.register(r"roles", RoleViewSet, basename="role")
 v2_api.register(r"sla_configurations", SLAConfigurationViewset, basename="sla_configurations")
+v2_api.register(r"snyk_issues", SnykIssueViewSet, basename="snyk_issue")
+v2_api.register(r"snyk_transitions", SnykIssueTransitionViewSet, basename="snyk_issue_transition")
 v2_api.register(r"sonarqube_issues", SonarqubeIssueViewSet, basename="sonarqube_issue")
 v2_api.register(r"sonarqube_transitions", SonarqubeIssueTransitionViewSet, basename="sonarqube_issue_transition")
 v2_api.register(r"stub_findings", StubFindingsViewSet, basename="stub_finding")

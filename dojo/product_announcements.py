@@ -140,6 +140,7 @@ class ScanTypeProductAnnouncement(ProductAnnouncementManager):
         "Probely Scan",  # No OS support here
         "Checkmarx One Scan",
         "Tenable Scan",
+        "Snyk Scan",
         "SonarQube Scan",
         "Dependency Track Finding Packaging Format (FPF) Export",
         "Wiz Scan",
