@@ -144,40 +144,58 @@ class SnykApiImporter:
                 logger.debug(
                     f"Issue details - package: {vuln_pkg}, version: {vuln_version}, severity: {snyk_severity} -> {severity}")
 
-                # Build description
+                # Build description in Snyk parser format
                 description_parts = []
-                # Use title as description if no separate description field
-                description_parts.append(issue_title)
-
+                description_parts.append("## Component Details")
                 if vuln_pkg:
-                    description_parts.append(f"Package: {vuln_pkg}")
-
+                    description_parts.append(f"- **Vulnerable Package**: {vuln_pkg}")
                 if vuln_version:
-                    description_parts.append(f"Version: {vuln_version}")
-
+                    description_parts.append(f"- **Current Version**: {vuln_version}")
+                
+                # Add vulnerable path info if available from coordinates
+                vulnerable_path = f"{vuln_pkg}@{vuln_version}" if vuln_pkg and vuln_version else "Unknown"
+                description_parts.append(f"- **Vulnerable Path**: {vulnerable_path}")
+                
+                # Add main issue description
+                description_parts.append("")  # Empty line
+                description_parts.append(issue_title)
+                
                 # Add exploit details if available
                 exploit_details = issue.get("attributes", {}).get("exploit_details", {})
                 if exploit_details:
                     sources = exploit_details.get("sources", [])
                     if sources:
-                        description_parts.append(f"Exploit Sources: {', '.join(sources)}")
+                        description_parts.append(f"\n**Exploit Sources**: {', '.join(sources)}")
 
-                description = "\n\n".join(
-                    description_parts) if description_parts else "No description available"
+                description = "\n".join(description_parts)
                 logger.debug(
                     f"Built description with {len(description_parts)} parts")
 
-                # Build references
+                # Build references in Snyk parser format
                 references = ""
                 if issue_url:
-                    references += f"[Snyk Issue]({issue_url})\n"
+                    references += f"**SNYK ID**: {issue_url}\n\n"
                     logger.debug(f"Added issue URL to references: {issue_url}")
 
-                # Add CVE references from problems
+                # Add CVE references from problems - include all sources, not just NVD
                 problems = issue.get("attributes", {}).get("problems", [])
+                cve_ids = []
                 for problem in problems:
-                    if problem.get("source") == "NVD" and problem.get("url"): # TODO - why only NVD
-                        references += f"[{problem.get('id')}]({problem.get('url')})\n"
+                    if problem.get("id") and problem.get("id").startswith("CVE-"):
+                        cve_ids.append(problem.get("id"))
+                    if problem.get("url"):
+                        problem_title = problem.get("id", "Reference")
+                        references += f"**{problem_title}**: {problem.get('url')}\n"
+                
+                # Add CWE references if multiple CWEs
+                classes = issue.get("attributes", {}).get("classes", [])
+                cwe_references = []
+                for cls in classes:
+                    if cls.get("source") == "CWE" and cls.get("id", "").startswith("CWE-"):
+                        cwe_references.append(cls.get("id"))
+                
+                if len(cwe_references) > 1:
+                    references += f"\nSeveral CWEs were reported: \n\n{', '.join(cwe_references)}\n"
 
 
                 cwe = self.get_cwe_number(issue)
@@ -207,39 +225,69 @@ class SnykApiImporter:
                         f"Snyk issue {issue_id} already has a finding, not assigning to new finding")
                     snyk_issue = None
 
-                # Determine if finding is verified
-                # TODO DIMI - this needs to be reviewed
-                verified = severity in ["Critical", "High"]
-                logger.debug(
-                    f"Finding verification status: {verified} (based on severity: {severity})")
-
                 find = Finding(
-                    title=title,
+                    title=f"{vuln_pkg}: {issue_title}" if vuln_pkg else issue_title,
                     cwe=cwe,
                     description=description,
                     test=test,
                     severity=severity,
+                    severity_justification=f"Issue severity of: **{severity}** from a base CVSS score of: **{cvss_score}**" if cvss_score else f"Issue severity of: **{severity}**",
                     references=references,
-                    file_path=file_path,
-                    verified=verified,
+                    file_path=f"{vuln_pkg}@{vuln_version}" if vuln_pkg and vuln_version else "",
+                    verified=severity in ["Critical", "High"],
                     false_p=False,
                     duplicate=False,
                     out_of_scope=False,
                     mitigated=None,
-                    mitigation="No mitigation provided",
-                    impact="No impact provided",
+                    mitigation="A fix (if available) will be provided in the description.",
+                    impact=severity,  # Set impact to severity like parser.py
                     static_finding=True,
+                    dynamic_finding=False,  # Add missing field from parser.py
                     snyk_issue=snyk_issue,
-                    unique_id_from_tool=issue_id,
+                    vuln_id_from_tool=issue_id,  # Use vuln_id_from_tool like parser.py
                     component_name=vuln_pkg,
                     component_version=vuln_version,
                 )
 
-                # Add CVSS score if available
+                # Add CVSS vector if available (like parser.py)
+                severities = issue.get("attributes", {}).get("severities", [])
+                for severity_info in severities:
+                    if severity_info.get("source") == "Snyk" and severity_info.get("vector"):
+                        try:
+                            from cvss.cvss3 import CVSS3
+                            find.cvssv3 = CVSS3(severity_info["vector"]).clean_vector()
+                            logger.debug(f"Added CVSS vector: {find.cvssv3}")
+                            break
+                        except ImportError:
+                            logger.warning("cvss library not available for CVSS vector processing")
+                        except Exception as e:
+                            logger.warning(f"Failed to process CVSS vector: {e}")
+
+                # Add EPSS scores if available (like parser.py)
+                # Note: EPSS data is typically not available in Snyk API v1, but we check anyway
+                risk_data = issue.get("attributes", {}).get("risk", {})
+                if risk_data and "epss" in risk_data:
+                    epss_data = risk_data["epss"]
+                    if "probability" in epss_data:
+                        find.epss_score = epss_data["probability"]
+                        logger.debug(f"Added EPSS score: {find.epss_score}")
+                    if "percentile" in epss_data:
+                        find.epss_percentile = epss_data["percentile"]
+                        logger.debug(f"Added EPSS percentile: {find.epss_percentile}")
+
+                # Add vulnerability IDs like parser.py
+                find.unsaved_vulnerability_ids = cve_ids if cve_ids else []
+                if cve_ids:
+                    logger.debug(f"Added vulnerability IDs: {cve_ids}")
+
+                # Add tags for additional metadata (like parser.py)
+                find.unsaved_tags = []
+                if package_type:
+                    find.unsaved_tags.append(f"snyk_type:{package_type}")
+
+                # Add CVSS score if available (legacy support)
                 if cvss_score:
-                    find.severity_justification = f"CVSS Score: {cvss_score}"
-                    logger.debug(
-                        f"Added CVSS score justification: {cvss_score}")
+                    logger.debug(f"Added CVSS score justification: {cvss_score}")
 
                 items.append(find)
                 logger.debug(f"Created finding for issue {issue_id}: {title}")
