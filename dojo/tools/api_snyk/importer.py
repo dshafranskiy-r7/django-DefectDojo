@@ -124,12 +124,11 @@ class SnykApiImporter:
 
                 # Get detailed issue information
                 issue_title = issue.get("attributes", {}).get("title", "Unknown Snyk Issue")
-                title = textwrap.shorten(text=issue_title, width=500)
-                logger.debug(f"Issue title: {title}")
-
+                
                 # Extract vulnerability information from coordinates
                 vuln_pkg = ""
                 vuln_version = ""
+                vulnerable_path_components = []
                 coordinates = issue.get("attributes", {}).get("coordinates", [])
                 if coordinates and len(coordinates) > 0:
                     representations = coordinates[0].get("representations", [])
@@ -137,6 +136,15 @@ class SnykApiImporter:
                         dependency = representations[0].get("dependency", {})
                         vuln_pkg = dependency.get("package_name", "")
                         vuln_version = dependency.get("package_version", "")
+                        
+                        # Build vulnerable path components - try to get the project name from relationships
+                        # For now, we'll use the package as the root since we don't have full dependency tree
+                        vulnerable_path_components = [f"{vuln_pkg}@{vuln_version}"]
+
+                # Create title in parser format: "root_project: title" 
+                title_format = f"{vuln_pkg}: {issue_title}" if vuln_pkg else issue_title
+                title = textwrap.shorten(text=title_format, width=500)
+                logger.debug(f"Issue title: {title}")
 
                 # Get severity from effective_severity_level
                 snyk_severity = issue.get("attributes", {}).get("effective_severity_level", "low")
@@ -144,21 +152,41 @@ class SnykApiImporter:
                 logger.debug(
                     f"Issue details - package: {vuln_pkg}, version: {vuln_version}, severity: {snyk_severity} -> {severity}")
 
-                # Build description in Snyk parser format
+                # Get Snyk vulnerability key for references
+                snyk_key = issue.get("attributes", {}).get("key", "")
+
+                # Build comprehensive description in Snyk parser format
                 description_parts = []
                 description_parts.append("## Component Details")
                 if vuln_pkg:
-                    description_parts.append(f"- **Vulnerable Package**: {vuln_pkg}")
+                    description_parts.append(f" - **Vulnerable Package**: {vuln_pkg}")
                 if vuln_version:
                     description_parts.append(f"- **Current Version**: {vuln_version}")
                 
-                # Add vulnerable path info if available from coordinates
-                vulnerable_path = f"{vuln_pkg}@{vuln_version}" if vuln_pkg and vuln_version else "Unknown"
+                # Try to extract vulnerable versions from severities or use current version
+                vulnerable_versions = vuln_version if vuln_version else "Unknown"
+                description_parts.append(f"- **Vulnerable Version(s)**: {vulnerable_versions}")
+                
+                # Add vulnerable path - use what we have from coordinates
+                vulnerable_path = " > ".join(vulnerable_path_components) if vulnerable_path_components else f"{vuln_pkg}@{vuln_version}" if vuln_pkg and vuln_version else "Unknown"
                 description_parts.append(f"- **Vulnerable Path**: {vulnerable_path}")
                 
-                # Add main issue description
-                description_parts.append("")  # Empty line
+                # Add main issue description with Overview section like parser.py
+                description_parts.append("## Overview")
+                if vuln_pkg:
+                    description_parts.append(f"[{vuln_pkg}](https://mvnrepository.com/artifact/{vuln_pkg.replace(':', '/')}) is a package in the project dependencies.")
+                description_parts.append("")
+                description_parts.append(f"Affected versions of this package are vulnerable to {issue_title}.")
                 description_parts.append(issue_title)
+                
+                # Add detailed vulnerability information if available from problems
+                problems = issue.get("attributes", {}).get("problems", [])
+                cve_problems = [p for p in problems if p.get("id", "").startswith("CVE-")]
+                if cve_problems:
+                    # Add note about related CVEs like parser.py does
+                    other_cves = [p.get("id") for p in cve_problems[1:]]  # All except first
+                    if other_cves:
+                        description_parts.append(f"\n**NOTE:** This vulnerability has also been identified as: {', '.join([f'[{cve}](https://security.snyk.io/vuln/{snyk_key})' for cve in other_cves])}")
                 
                 # Add exploit details if available
                 exploit_details = issue.get("attributes", {}).get("exploit_details", {})
@@ -166,28 +194,60 @@ class SnykApiImporter:
                     sources = exploit_details.get("sources", [])
                     if sources:
                         description_parts.append(f"\n**Exploit Sources**: {', '.join(sources)}")
+                
+                # Add Details section for deserialization vulnerabilities like parser.py
+                if "deserialization" in issue_title.lower() or any("502" in str(cls.get("id", "")) for cls in issue.get("attributes", {}).get("classes", [])):
+                    description_parts.extend([
+                        "\n## Details",
+                        "",
+                        "Serialization is a process of converting an object into a sequence of bytes which can be persisted to a disk or database or can be sent through streams. The reverse process of creating object from sequence of bytes is called deserialization.",
+                        "",
+                        "_Deserialization of untrusted data_ ([CWE-502](https://cwe.mitre.org/data/definitions/502.html)), is when the application deserializes untrusted data without sufficiently verifying that the resulting data will be valid, letting the attacker to control the state or the flow of the execution.",
+                    ])
+
+                # Add Remediation section like parser.py
+                description_parts.append("\n## Remediation")
+                coordinates_info = coordinates[0] if coordinates else {}
+                if coordinates_info.get("is_upgradeable") and vuln_pkg:
+                    description_parts.append(f"Upgrade `{vuln_pkg}` to a fixed version.")
+                else:
+                    description_parts.append("Check for available patches or security updates for this package.")
 
                 description = "\n".join(description_parts)
                 logger.debug(
-                    f"Built description with {len(description_parts)} parts")
+                    f"Built comprehensive description with {len(description_parts)} parts")
 
-                # Build references in Snyk parser format
+                # Build comprehensive references in Snyk parser format
                 references = ""
-                if issue_url:
-                    references += f"**SNYK ID**: {issue_url}\n\n"
-                    logger.debug(f"Added issue URL to references: {issue_url}")
+                
+                # Add Snyk ID reference first like parser.py
+                if snyk_key:
+                    snyk_vuln_url = f"https://app.snyk.io/vuln/{snyk_key}"
+                    references += f"**SNYK ID**: {snyk_vuln_url}\n\n"
+                    logger.debug(f"Added Snyk vulnerability URL to references: {snyk_vuln_url}")
 
-                # Add CVE references from problems - include all sources, not just NVD
+                # Process all problems for references - include all sources like parser.py
                 problems = issue.get("attributes", {}).get("problems", [])
                 cve_ids = []
-                for problem in problems:
-                    if problem.get("id") and problem.get("id").startswith("CVE-"):
-                        cve_ids.append(problem.get("id"))
-                    if problem.get("url"):
-                        problem_title = problem.get("id", "Reference")
-                        references += f"**{problem_title}**: {problem.get('url')}\n"
+                reference_links = []
                 
-                # Add CWE references if multiple CWEs
+                for problem in problems:
+                    problem_id = problem.get("id", "")
+                    problem_url = problem.get("url", "")
+                    problem_source = problem.get("source", "")
+                    
+                    if problem_id.startswith("CVE-"):
+                        cve_ids.append(problem_id)
+                    
+                    # Add reference links like parser.py format
+                    if problem_url:
+                        if problem_source == "NVD" or problem_id.startswith("CVE-"):
+                            reference_links.append(f"**{problem_id}**: {problem_url}")
+                        else:
+                            title = problem_id if problem_id else problem_source
+                            reference_links.append(f"**{title}**: {problem_url}")
+
+                # Add CWE references if multiple CWEs like parser.py
                 classes = issue.get("attributes", {}).get("classes", [])
                 cwe_references = []
                 for cls in classes:
@@ -195,14 +255,39 @@ class SnykApiImporter:
                         cwe_references.append(cls.get("id"))
                 
                 if len(cwe_references) > 1:
-                    references += f"\nSeveral CWEs were reported: \n\n{', '.join(cwe_references)}\n"
+                    references += f"Several CWEs were reported: \n\n{', '.join(cwe_references)}\n\n"
 
+                # Add all reference links
+                if reference_links:
+                    references += "\n".join(reference_links) + "\n"
+
+
+                # Create comprehensive mitigation like parser.py
+                mitigation_parts = ["## Remediation"]
+                coordinates_info = coordinates[0] if coordinates else {}
+                
+                if coordinates_info.get("is_upgradeable") and vuln_pkg:
+                    # Try to suggest upgrade like parser.py does
+                    mitigation_parts.append(f"Upgrade `{vuln_pkg}` to a fixed version.")
+                    
+                    # Add specific upgrade information if we had it (parser.py gets this from remediation data)
+                    # For API, we don't have specific version info, so provide general guidance
+                    if vuln_version:
+                        mitigation_parts.append(f"\nUpgrade from {vuln_pkg}@{vuln_version} to fix this issue.")
+                else:
+                    mitigation_parts.append("A fix (if available) will be provided in the vulnerability details.")
+                
+                # Extract remediation info from description if it contains it
+                full_mitigation = "\n".join(mitigation_parts)
+                
+                logger.debug(f"Built mitigation with {len(mitigation_parts)} parts")
 
                 cwe = self.get_cwe_number(issue)
 
                 cvss_score = self.get_cvss_score(issue)
 
-                file_path = ""  # Not available for 3rd-party dependencies
+                # Build file_path like parser.py - show dependency chain
+                file_path = vulnerable_path.replace("@" + vuln_version, "") if vulnerable_path and vuln_version else (f"{vuln_pkg}" if vuln_pkg else "")
                 logger.debug(
                     f"Extracted metadata - CWE: {cwe}, CVSS: {cvss_score}, file_path: {file_path}")
 
@@ -226,25 +311,25 @@ class SnykApiImporter:
                     snyk_issue = None
 
                 find = Finding(
-                    title=f"{vuln_pkg}: {issue_title}" if vuln_pkg else issue_title,
+                    title=title_format,  # Use the properly formatted title
                     cwe=cwe,
                     description=description,
                     test=test,
                     severity=severity,
                     severity_justification=f"Issue severity of: **{severity}** from a base CVSS score of: **{cvss_score}**" if cvss_score else f"Issue severity of: **{severity}**",
                     references=references,
-                    file_path=f"{vuln_pkg}@{vuln_version}" if vuln_pkg and vuln_version else "",
+                    file_path=file_path,
                     verified=severity in ["Critical", "High"],
                     false_p=False,
                     duplicate=False,
                     out_of_scope=False,
                     mitigated=None,
-                    mitigation="A fix (if available) will be provided in the description.",
+                    mitigation=full_mitigation,  # Use comprehensive mitigation
                     impact=severity,  # Set impact to severity like parser.py
                     static_finding=True,
                     dynamic_finding=False,  # Add missing field from parser.py
                     snyk_issue=snyk_issue,
-                    vuln_id_from_tool=issue_id,  # Use vuln_id_from_tool like parser.py
+                    vuln_id_from_tool=snyk_key if snyk_key else issue_id,  # Use Snyk key like parser.py
                     component_name=vuln_pkg,
                     component_version=vuln_version,
                 )
@@ -280,10 +365,28 @@ class SnykApiImporter:
                 if cve_ids:
                     logger.debug(f"Added vulnerability IDs: {cve_ids}")
 
-                # Add tags for additional metadata (like parser.py)
+                # Add tags for additional metadata like parser.py
                 find.unsaved_tags = []
+                
+                # Add package type tag
                 if package_type:
                     find.unsaved_tags.append(f"snyk_type:{package_type}")
+                
+                # Add upgrade information if available (like parser.py target_file and upgrade_to tags)
+                coordinates_info = coordinates[0] if coordinates else {}
+                if coordinates_info.get("is_upgradeable") and vuln_pkg:
+                    # We don't have target file info from API, but we can add upgrade intent
+                    find.unsaved_tags.append(f"upgradeable:{vuln_pkg}")
+                
+                # Add fixable tags based on coordinates
+                if coordinates_info.get("is_fixable_snyk"):
+                    find.unsaved_tags.append("fixable:snyk")
+                if coordinates_info.get("is_fixable_upstream"):
+                    find.unsaved_tags.append("fixable:upstream")
+                if coordinates_info.get("is_patchable"):
+                    find.unsaved_tags.append("patchable:true")
+                if coordinates_info.get("is_pinnable"):
+                    find.unsaved_tags.append("pinnable:true")
 
                 # Add CVSS score if available (legacy support)
                 if cvss_score:

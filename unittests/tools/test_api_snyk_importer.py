@@ -355,3 +355,187 @@ class TestApiSnykImporter(DojoTestCase):
         self.assertTrue(importer.convert_snyk_severity("high") in ["Critical", "High"])     # Should be verified
         self.assertFalse(importer.convert_snyk_severity("medium") in ["Critical", "High"])  # Should not be verified
         self.assertFalse(importer.convert_snyk_severity("low") in ["Critical", "High"])     # Should not be verified
+
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_organization")
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_issues")
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_id_to_org_mapping")
+    def test_finding_format_matches_parser(self, mock_get_organization, mock_get_issues, mock_get_id_to_org_mapping):
+        """Test that the API importer produces findings that match the parser format"""
+        # Setup mocks to return single issue data
+        mock_get_organization.side_effect = dummy_organization
+        mock_get_issues.return_value = [single_issue_data()]
+        mock_get_id_to_org_mapping.side_effect = dummy_mapping
+
+        importer = SnykApiImporter()
+        findings = importer.import_issues(self.test)
+        
+        self.assertEqual(1, len(findings))
+        finding = findings[0]
+        
+        # Test title format matches parser: "package: title"
+        self.assertEqual(finding.title, "com.fasterxml.jackson.core:jackson-databind: Deserialization of Untrusted Data")
+        
+        # Test description has comprehensive format like parser
+        self.assertIn("## Component Details", finding.description)
+        self.assertIn("**Vulnerable Package**: com.fasterxml.jackson.core:jackson-databind", finding.description)
+        self.assertIn("**Current Version**: 2.8.9", finding.description)
+        self.assertIn("**Vulnerable Path**: com.fasterxml.jackson.core:jackson-databind@2.8.9", finding.description)
+        self.assertIn("## Overview", finding.description)
+        self.assertIn("## Details", finding.description)  # Because it's a deserialization vuln
+        self.assertIn("## Remediation", finding.description)
+        
+        # Test mitigation has remediation format like parser
+        self.assertIn("## Remediation", finding.mitigation)
+        self.assertIn("Upgrade `com.fasterxml.jackson.core:jackson-databind` to a fixed version", finding.mitigation)
+        
+        # Test references format matches parser
+        self.assertIn("**SNYK ID**: https://app.snyk.io/vuln/SNYK-JAVA-COMFASTERXMLJACKSONCORE-1056417", finding.references)
+        self.assertIn("**CVE-2020-36186**: https://nvd.nist.gov/vuln/detail/CVE-2020-36186", finding.references)
+        
+        # Test other fields match parser format
+        self.assertEqual(finding.severity, "High")
+        self.assertEqual(finding.impact, "High")  # Impact should match severity
+        self.assertEqual(finding.component_name, "com.fasterxml.jackson.core:jackson-databind")
+        self.assertEqual(finding.component_version, "2.8.9")
+        self.assertEqual(finding.vuln_id_from_tool, "SNYK-JAVA-COMFASTERXMLJACKSONCORE-1056417")  # Should use Snyk key
+        self.assertEqual(finding.file_path, "com.fasterxml.jackson.core:jackson-databind")  # Should be clean package name
+        self.assertEqual(finding.cwe, 502)
+        self.assertTrue(finding.static_finding)
+        self.assertFalse(finding.dynamic_finding)
+        self.assertTrue(finding.verified)  # High severity should be verified
+        
+        # Test CVSS vector is set
+        self.assertEqual(finding.cvssv3, "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H/E:U/RL:U/RC:C")
+        
+        # Test vulnerability IDs are set
+        self.assertEqual(finding.unsaved_vulnerability_ids, ["CVE-2020-36186"])
+        
+        # Test tags include meaningful information like parser
+        expected_tags = [
+            "snyk_type:package_vulnerability",
+            "upgradeable:com.fasterxml.jackson.core:jackson-databind",
+            "fixable:snyk"
+        ]
+        for tag in expected_tags:
+            self.assertIn(tag, finding.unsaved_tags)
+
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_organization")
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_issues")
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_id_to_org_mapping")
+    def test_title_format_comprehensive(self, mock_get_organization, mock_get_issues, mock_get_id_to_org_mapping):
+        """Test various title formats match parser style"""
+        mock_get_organization.side_effect = dummy_organization
+        mock_get_id_to_org_mapping.side_effect = dummy_mapping
+        
+        # Test with package name
+        issue_with_package = single_issue_data()
+        mock_get_issues.return_value = [issue_with_package]
+        
+        importer = SnykApiImporter()
+        findings = importer.import_issues(self.test)
+        finding = findings[0]
+        
+        self.assertEqual(finding.title, "com.fasterxml.jackson.core:jackson-databind: Deserialization of Untrusted Data")
+
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_organization")
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_issues")
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_id_to_org_mapping")
+    def test_description_comprehensive_sections(self, mock_get_organization, mock_get_issues, mock_get_id_to_org_mapping):
+        """Test that description includes all parser-like sections"""
+        mock_get_organization.side_effect = dummy_organization
+        mock_get_issues.return_value = [single_issue_data()]
+        mock_get_id_to_org_mapping.side_effect = dummy_mapping
+
+        importer = SnykApiImporter()
+        findings = importer.import_issues(self.test)
+        finding = findings[0]
+        
+        # Test all expected sections are present
+        required_sections = [
+            "## Component Details",
+            "**Vulnerable Package**: com.fasterxml.jackson.core:jackson-databind",
+            "**Current Version**: 2.8.9",
+            "**Vulnerable Version(s)**: 2.8.9",
+            "**Vulnerable Path**: com.fasterxml.jackson.core:jackson-databind@2.8.9",
+            "## Overview",
+            "## Details",  # For deserialization vulnerabilities
+            "## Remediation"
+        ]
+        
+        for section in required_sections:
+            self.assertIn(section, finding.description, f"Missing section: {section}")
+        
+        # Test deserialization-specific content
+        self.assertIn("Deserialization of Untrusted Data", finding.description)
+        self.assertIn("CWE-502", finding.description)
+
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_organization")
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_issues")
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_id_to_org_mapping")
+    def test_references_comprehensive_format(self, mock_get_organization, mock_get_issues, mock_get_id_to_org_mapping):
+        """Test that references match parser format exactly"""
+        mock_get_organization.side_effect = dummy_organization
+        mock_get_issues.return_value = [single_issue_data()]
+        mock_get_id_to_org_mapping.side_effect = dummy_mapping
+
+        importer = SnykApiImporter()
+        findings = importer.import_issues(self.test)
+        finding = findings[0]
+        
+        # Test Snyk ID format
+        self.assertIn("**SNYK ID**: https://app.snyk.io/vuln/SNYK-JAVA-COMFASTERXMLJACKSONCORE-1056417", finding.references)
+        
+        # Test CVE reference format
+        self.assertIn("**CVE-2020-36186**: https://nvd.nist.gov/vuln/detail/CVE-2020-36186", finding.references)
+        
+        # Test that references follow parser format with proper titles and links
+        lines = finding.references.split('\n')
+        reference_lines = [line for line in lines if line.startswith('**') and '**:' in line]
+        
+        self.assertGreaterEqual(len(reference_lines), 2)  # At least SNYK ID and CVE
+        
+        # Each reference should have proper format: **Title**: URL
+        for ref_line in reference_lines:
+            self.assertRegex(ref_line, r'\*\*[^*]+\*\*: https?://.+')
+
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_organization")  
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_issues")
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_id_to_org_mapping")
+    def test_tags_match_parser_style(self, mock_get_organization, mock_get_issues, mock_get_id_to_org_mapping):
+        """Test that tags provide meaningful information like parser"""
+        mock_get_organization.side_effect = dummy_organization
+        mock_get_issues.return_value = [single_issue_data()]
+        mock_get_id_to_org_mapping.side_effect = dummy_mapping
+
+        importer = SnykApiImporter()
+        findings = importer.import_issues(self.test)
+        finding = findings[0]
+        
+        # Test specific tags are present
+        self.assertIn("snyk_type:package_vulnerability", finding.unsaved_tags)
+        self.assertIn("upgradeable:com.fasterxml.jackson.core:jackson-databind", finding.unsaved_tags)
+        self.assertIn("fixable:snyk", finding.unsaved_tags)
+        
+        # Test no unneeded fixable tags (based on test data)
+        self.assertNotIn("fixable:upstream", finding.unsaved_tags)  # is_fixable_upstream is false
+        self.assertNotIn("patchable:true", finding.unsaved_tags)    # is_patchable is false
+        self.assertNotIn("pinnable:true", finding.unsaved_tags)     # is_pinnable is false
+
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_organization")
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_issues")
+    @mock.patch("dojo.tools.api_snyk.api_client.SnykAPI.get_id_to_org_mapping")
+    def test_file_path_format(self, mock_get_organization, mock_get_issues, mock_get_id_to_org_mapping):
+        """Test file_path follows parser format (dependency chain without versions)"""
+        mock_get_organization.side_effect = dummy_organization
+        mock_get_issues.return_value = [single_issue_data()]
+        mock_get_id_to_org_mapping.side_effect = dummy_mapping
+
+        importer = SnykApiImporter()
+        findings = importer.import_issues(self.test)
+        finding = findings[0]
+        
+        # Parser format removes versions from file_path
+        self.assertEqual(finding.file_path, "com.fasterxml.jackson.core:jackson-databind")
+        
+        # Should not include version in file_path like API used to do
+        self.assertNotIn("@2.8.9", finding.file_path)
