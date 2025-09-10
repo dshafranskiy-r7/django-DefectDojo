@@ -1,5 +1,6 @@
 import logging
 import textwrap
+import json # for debugging
 
 from django.core.exceptions import ValidationError
 
@@ -22,13 +23,17 @@ class SnykApiImporter:
         return items
 
     @staticmethod
-    def is_resolved(issue):
-        """Check if the issue is resolved in Snyk."""
-        resolved = issue.get("attributes", False).get("resolved", False)
-        if resolved:
+    def is_in_state(issue, state):
+        """Check if the issue is <state> in Snyk."""
+        status = issue.get("attributes", False).get("status", False)
+
+        in_state = status == state
+
+        if in_state:
             logger.debug(
-                f"Issue {issue.get('id', 'unknown')} is resolved in Snyk")
-        return resolved
+                f"Issue {issue.get('id', 'unknown')} is {state} in Snyk")
+
+        return in_state
 
     @staticmethod
     def prepare_client(test):
@@ -110,7 +115,7 @@ class SnykApiImporter:
 
                 # Skip resolved issues ( we want to import ignored issues though )
                 # TODO DIMI - test coverage
-                if self.is_resolved(issue):
+                if self.is_in_state(issue, "resolved"):
                     logger.debug(f"Skipping resolved issue: {issue_id}")
                     continue
 
@@ -203,6 +208,7 @@ class SnykApiImporter:
                     snyk_issue = None
 
                 # Determine if finding is verified
+                # TODO DIMI - this needs to be reviewed
                 verified = severity in ["Critical", "High"]
                 logger.debug(
                     f"Finding verification status: {verified} (based on severity: {severity})")

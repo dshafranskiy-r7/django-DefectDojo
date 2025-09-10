@@ -3,7 +3,7 @@
     "configurations": [
         {
 
-            "name": "DefectDojo (uwsgi service)",
+            "name": "DD (uwsgi service)",
             "type": "python",
             "request": "attach",
             "port": 5678,
@@ -20,7 +20,7 @@
         },
         {
 
-            "name": "DefectDojo (Local Tests)",
+            "name": "DD (Local Tests)",
             "type": "python",
             "request": "attach",
             "port": 5679,
@@ -37,7 +37,7 @@
         },
                 {
 
-            "name": "DefectDojo (Celery Worker)",
+            "name": "DD (Celery Worker)",
             "type": "python",
             "request": "attach",
             "port": 5680,

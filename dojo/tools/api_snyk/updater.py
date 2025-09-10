@@ -75,11 +75,13 @@ class SnykApiUpdater:
                 logger.warning(f"Issue {snyk_issue.key} not found in Snyk (may have been deleted)")
                 return
 
-            current_status = "IGNORED" if SnykApiImporter.is_ignored(issue) else "OPEN"
+            # TODO DIMI - can this be resolved as well ?
+            current_status = "IGNORED" if SnykApiImporter.is_in_state(issue, "ignored") else "OPEN"
 
             logger.debug(
                 f"--> Snyk Current status: {current_status}. Current target status: {target_status}",
             )
+
             # TODO DIMI - replace with get methods for better handling
             issue_name = issue["attributes"]["key"]
             project = issue["relationships"]["scan_item"]["data"]["id"]
