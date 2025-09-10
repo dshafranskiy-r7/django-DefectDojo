@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('key', models.CharField(help_text='Snyk issue key', max_length=60, unique=True)),
                 ('status', models.CharField(help_text='Snyk issue status', max_length=20)),
-                ('type', models.CharField(help_text='Snyk issue type', max_length=20)),
+                ('type', models.CharField(help_text='Snyk issue type', max_length=25)),
             ],
         ),
         migrations.CreateModel(

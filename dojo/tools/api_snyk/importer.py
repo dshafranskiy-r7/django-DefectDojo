@@ -22,13 +22,13 @@ class SnykApiImporter:
         return items
 
     @staticmethod
-    def is_ignored(issue):
-        """Check if the issue is ignored in Snyk."""
-        ignored = issue.get("attributes", False).get("ignored", False)
-        if ignored:
+    def is_resolved(issue):
+        """Check if the issue is resolved in Snyk."""
+        resolved = issue.get("attributes", False).get("resolved", False)
+        if resolved:
             logger.debug(
-                f"Issue {issue.get('id', 'unknown')} is ignored in Snyk")
-        return ignored
+                f"Issue {issue.get('id', 'unknown')} is resolved in Snyk")
+        return resolved
 
     @staticmethod
     def prepare_client(test):
@@ -108,17 +108,14 @@ class SnykApiImporter:
                 issue_id = issue.get("id")
                 logger.debug(f"Processing issue: {issue_id}")
 
-                # Skip ignored issues
-                if self.is_ignored(issue):
-                    logger.debug(f"Skipping ignored issue: {issue_id}")
+                # Skip resolved issues ( we want to import ignored issues though )
+                # TODO DIMI - test coverage
+                if self.is_resolved(issue):
+                    logger.debug(f"Skipping resolved issue: {issue_id}")
                     continue
 
-                key = issue["attributes"]["key"]
-                project = issue["relationships"]["scan_item"]["data"]["id"]
-                org_name = client.get_id_to_org_mapping().get(org_id, "unknown_org")
-
-                # TODO - this one is different from default one
-                issue_url = f"https://app.snyk.io/org/{org_name}/project/{project}#issue-{key}"
+                # TODO DIMI - test coverage
+                issue_url = self.get_issue_url(client, org_id, issue)
 
                 # Get detailed issue information
                 issue_title = issue.get("attributes", {}).get("title", "Unknown Snyk Issue")
@@ -177,38 +174,16 @@ class SnykApiImporter:
                     if problem.get("source") == "NVD" and problem.get("url"): # TODO - why only NVD
                         references += f"[{problem.get('id')}]({problem.get('url')})\n"
 
-                # Extract CWE from classes
-                cwe = None
-                classes = issue.get("attributes", {}).get("classes", [])
-                for cls in classes:
-                    if cls.get("source") == "CWE" and cls.get("id", "").startswith("CWE-"):
-                        try:
-                            cwe = int(cls.get("id")[4:])
-                            logger.debug(f"Extracted CWE number: {cwe}")
-                            break
-                        except ValueError:
-                            logger.debug(f"Failed to parse CWE number from: {cls.get('id')}")
 
-                # Get CVSS score from severities (prefer Snyk source)
-                # TODO - need to work on that CVSS score
-                cvss_score = None
-                severities = issue.get("attributes", {}).get("severities", [])
-                for severity_info in severities:
-                    if severity_info.get("source") == "Snyk":
-                        cvss_score = severity_info.get("score")
-                        break
-                if not cvss_score and severities:
-                    cvss_score = severities[0].get("score")
+                cwe = self.get_cwe_number(issue)
+
+                cvss_score = self.get_cvss_score(issue)
 
                 file_path = ""  # Not available for 3rd-party dependencies
                 logger.debug(
                     f"Extracted metadata - CWE: {cwe}, CVSS: {cvss_score}, file_path: {file_path}")
 
                 package_type = issue.get("attributes", {}).get("type", "package_vulnerability")
-                # TODO - update schema or leave it
-                # this is done so we would fit the length of field
-                if package_type == "package_vulnerability":
-                    package_type = "package"
 
                 # Create or update Snyk issue tracking
                 snyk_issue, created = Snyk_Issue.objects.update_or_create(
@@ -278,6 +253,44 @@ class SnykApiImporter:
             )
 
         return items
+
+
+    def get_issue_url(self, client, org_id, issue):
+        key = issue["attributes"]["key"]
+        project = issue["relationships"]["scan_item"]["data"]["id"]
+        org_name = client.get_id_to_org_mapping().get(org_id, "unknown_org")
+
+        # TODO - this one is different from default one
+        issue_url = f"https://app.snyk.io/org/{org_name}/project/{project}#issue-{key}"
+        return issue_url
+
+    # TODO DIMI - test coverage
+    @staticmethod
+    def get_cwe_number(issue):
+        cwe = None
+        classes = issue.get("attributes", {}).get("classes", [])
+        for cls in classes:
+            if cls.get("source") == "CWE" and cls.get("id", "").startswith("CWE-"):
+                try:
+                    cwe = int(cls.get("id")[4:])
+                    logger.debug(f"Extracted CWE number: {cwe}")
+                    break
+                except ValueError:
+                    logger.debug(f"Failed to parse CWE number from: {cls.get('id')}")
+        return cwe
+
+    # TODO DIMI - test coverage
+    @staticmethod
+    def get_cvss_score(issue):
+        cvss_score = None
+        severities = issue.get("attributes", {}).get("severities", [])
+        for severity_info in severities:
+            if severity_info.get("source") == "Snyk":
+                cvss_score = severity_info.get("score")
+                break
+        if not cvss_score and severities:
+            cvss_score = severities[0].get("score")
+        return cvss_score
 
     @staticmethod
     def convert_snyk_severity(snyk_severity):

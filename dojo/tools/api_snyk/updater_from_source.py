@@ -44,23 +44,26 @@ class SnykApiUpdaterFromSource:
             logger.debug(f"Using organization ID: {org_id}")
 
             issue = client.get_issue(org_id, snyk_issue.key)
-            if issue:  # Issue could have disappeared in Snyk
-                current_status = "IGNORED" if issue.get("ignored", False) else "OPEN"
-                current_finding_status = self.get_snyk_status_for(finding)
-                
-                logger.debug(
-                    f"--> Snyk Current status: {current_status}. Finding status: {current_finding_status}",
-                )
 
-                if current_status != current_finding_status:
-                    logger.info(
-                        f"Original Snyk issue '{snyk_issue}' has changed. Updating DefectDojo finding '{finding}'...",
-                    )
-                    self.update_finding_status(finding, current_status, issue)
-                else:
-                    logger.debug("No status change needed - Snyk and DefectDojo are in sync")
-            else:
+            if not issue:  # Issue could have disappeared in Snyk
                 logger.warning(f"Issue {snyk_issue.key} not found in Snyk (may have been deleted)")
+                return
+
+            current_status = "IGNORED" if issue.get("ignored", False) else "OPEN"
+            current_finding_status = self.get_snyk_status_for(finding)
+
+            logger.debug(
+                f"--> Snyk Current status: {current_status}. Finding status: {current_finding_status}",
+            )
+
+            if current_status != current_finding_status:
+                logger.info(
+                    f"Original Snyk issue '{snyk_issue}' has changed. Updating DefectDojo finding '{finding}'...",
+                )
+                self.update_finding_status(finding, current_status, issue)
+            else:
+                logger.debug("No status change needed - Snyk and DefectDojo are in sync")
+
         except Exception as e:
             logger.warning(f"Failed to check Snyk issue {snyk_issue.key}: {str(e)}")
             logger.exception("Exception details for Snyk status check failure")
@@ -76,14 +79,14 @@ class SnykApiUpdaterFromSource:
             target_status = "IGNORED"
         elif finding.active:
             target_status = "OPEN"
-        
+
         logger.debug(f"Mapped finding status to Snyk status: {target_status} for finding {finding.id}")
         return target_status
 
     @staticmethod
     def update_finding_status(finding, snyk_status, issue_data=None):
         logger.debug(f"Updating finding {finding.id} to match Snyk status: {snyk_status}")
-        
+
         if snyk_status == "OPEN":
             logger.debug("Setting finding to active/open status")
             finding.active = True

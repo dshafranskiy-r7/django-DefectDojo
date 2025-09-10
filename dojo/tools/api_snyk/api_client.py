@@ -12,17 +12,11 @@ logger = logging.getLogger(__name__)
 # TODO - move to API config params
 snyk_api_version="2024-10-15"
 
-# Action types for ignoring issues in Snyk
-class IGNORE_TYPE(Enum):
+class IGNORE_REASON(Enum):
     # Those 3 types exist for open issue
     NOT_VULNERABLE = "not-vulnerable"
     IGNORE_PERMANENTLY = "temporary-ignore" # also needs date, not yet implemented
     WONT_FIX = "wont-fix"
-    #
-
-
-    FIXED = "fixed" # TODO DIMI - does not exist
-    OTHER = "other" # TODO DIMI - does not exist
 
 class SnykAPI:
     def __init__(self, tool_config):

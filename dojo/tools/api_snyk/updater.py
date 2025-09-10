@@ -3,7 +3,7 @@ import logging
 from dojo.models import Snyk_Issue_Transition
 
 from .importer import SnykApiImporter
-from .api_client import IGNORE_TYPE
+from .api_client import IGNORE_REASON
 
 logger = logging.getLogger(__name__)
 
@@ -70,64 +70,66 @@ class SnykApiUpdater:
             logger.debug(f"Using organization ID: {org_id}")
 
             issue = client.get_issue(org_id, snyk_issue.key)
-            if issue:  # Issue could have disappeared in Snyk
-                current_status = "IGNORED" if issue.get("attributes", {}).get("ignored", False) else "OPEN"
 
-                logger.debug(
-                    f"--> Snyk Current status: {current_status}. Current target status: {target_status}",
-                )
-                # TODO DIMI - replace with get methods for better handling
-                issue_name = issue["attributes"]["key"]
-                project = issue["relationships"]["scan_item"]["data"]["id"]
-                org_name = client.get_id_to_org_mapping().get(org_id, "unknown_org")
-
-                # Determine what action to take
-                if target_status and target_status != current_status:
-                    logger.info(
-                        f"Updating finding '{finding}' in Snyk",
-                    )
-
-                    if target_status.startswith("IGNORED"):
-                        # Map DefectDojo status to Snyk ignore reason
-                        if "FALSE-POSITIVE" in target_status:
-                            reason = IGNORE_TYPE.NOT_VULNERABLE.value
-                            notes = "Marked as false positive in DefectDojo"
-                        elif "FIXED" in target_status:
-                            reason = IGNORE_TYPE.FIXED.value
-                            notes = "Marked as fixed in DefectDojo"
-                        elif "WONTFIX" in target_status:
-                            reason = IGNORE_TYPE.WONT_FIX.value
-                            notes = "Risk accepted in DefectDojo"
-                        else:
-                            reason = IGNORE_TYPE.OTHER.value
-                            notes = "Ignored in DefectDojo"
-
-                        logger.debug(f"Ignoring issue with reason: {reason}, notes: {notes}")
-                        client.ignore_issue(org_name=org_name, project_id=project, issue_name=issue_name, reason=reason, notes=notes)
-                        action = f"ignored ({reason})"
-                    elif target_status == "OPEN" and current_status == "IGNORED":
-                        logger.debug("Unignoring issue")
-                        client.unignore_issue(org_name=org_name, project_id=project, issue_name=issue_name)
-                        action = "unignored"
-                    else:
-                        action = "no action needed"
-
-                    # Track DefectDojo has updated the Snyk issue
-                    if action != "no action needed":
-                        logger.debug(f"Creating transition record: {action}")
-                        Snyk_Issue_Transition.objects.create(
-                            snyk_issue=finding.snyk_issue,
-                            finding_status=finding.status().replace(
-                                "Risk Accepted", "Accepted",
-                            ) if finding.status() else finding.status(),
-                            snyk_status=current_status,
-                            transitions=action,
-                        )
-                        logger.info(f"Successfully updated Snyk issue {snyk_issue.key} with action: {action}")
-                else:
-                    logger.debug("No status change needed - Snyk and DefectDojo are in sync")
-            else:
+            if not issue:  # Issue could have disappeared in Snyk
                 logger.warning(f"Issue {snyk_issue.key} not found in Snyk (may have been deleted)")
+                return
+
+            current_status = "IGNORED" if SnykApiImporter.is_ignored(issue) else "OPEN"
+
+            logger.debug(
+                f"--> Snyk Current status: {current_status}. Current target status: {target_status}",
+            )
+            # TODO DIMI - replace with get methods for better handling
+            issue_name = issue["attributes"]["key"]
+            project = issue["relationships"]["scan_item"]["data"]["id"]
+            org_name = client.get_id_to_org_mapping().get(org_id, "unknown_org")
+
+            # Determine what action to take
+            if target_status and target_status != current_status:
+                logger.info(
+                    f"Updating finding '{finding}' in Snyk",
+                )
+
+                if target_status.startswith("IGNORED"):
+                    # Map DefectDojo status to Snyk ignore reason
+                    if "FALSE-POSITIVE" in target_status:
+                        reason = IGNORE_REASON.NOT_VULNERABLE.value
+                        notes = "Marked as false positive in DefectDojo"
+                    elif "FIXED" in target_status:
+                        reason = IGNORE_REASON.FIXED.value
+                        notes = "Marked as fixed in DefectDojo"
+                    elif "WONTFIX" in target_status:
+                        reason = IGNORE_REASON.WONT_FIX.value
+                        notes = "Risk accepted in DefectDojo"
+                    else:
+                        reason = IGNORE_REASON.OTHER.value
+                        notes = "Ignored in DefectDojo"
+
+                    logger.debug(f"Ignoring issue with reason: {reason}, notes: {notes}")
+                    client.ignore_issue(org_name=org_name, project_id=project, issue_name=issue_name, reason=reason, notes=notes)
+                    action = f"ignored ({reason})"
+                elif target_status == "OPEN" and current_status == "IGNORED":
+                    logger.debug("Unignoring issue")
+                    client.unignore_issue(org_name=org_name, project_id=project, issue_name=issue_name)
+                    action = "unignored"
+                else:
+                    action = "no action needed"
+
+                # Track DefectDojo has updated the Snyk issue
+                if action != "no action needed":
+                    logger.debug(f"Creating transition record: {action}")
+                    Snyk_Issue_Transition.objects.create(
+                        snyk_issue=finding.snyk_issue,
+                        finding_status=finding.status().replace(
+                            "Risk Accepted", "Accepted",
+                        ) if finding.status() else finding.status(),
+                        snyk_status=current_status,
+                        transitions=action,
+                    )
+                    logger.info(f"Successfully updated Snyk issue {snyk_issue.key} with action: {action}")
+            else:
+                logger.debug("No status change needed - Snyk and DefectDojo are in sync")
 
         except Exception as e:
             logger.warning(f"Failed to update Snyk issue {snyk_issue.key}: {str(e)}")
