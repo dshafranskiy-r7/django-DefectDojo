@@ -12,10 +12,15 @@ logger = logging.getLogger(__name__)
 # TODO - move to API config params
 snyk_api_version="2024-10-15"
 
+# Action types for ignoring issues in Snyk
 class IGNORE_TYPE(Enum):
+    # Those 3 types exist for open issue
     NOT_VULNERABLE = "not-vulnerable"
-    IGNORE_PERMANENTLY = "temporary-ignore" # also needs date, not implemented
+    IGNORE_PERMANENTLY = "temporary-ignore" # also needs date, not yet implemented
     WONT_FIX = "wont-fix"
+    #
+
+
     FIXED = "fixed" # TODO DIMI - does not exist
     OTHER = "other" # TODO DIMI - does not exist
 
@@ -23,31 +28,35 @@ class SnykAPI:
     def __init__(self, tool_config):
         logger.debug(f"Initializing Snyk API client with URL: {tool_config.url}")
         self.session = requests.Session()
+
+        # most of requests are using this headers
         self.default_headers = {
             "User-Agent": "DefectDojo",
             "authorization": tool_config.api_key,
             "accept": "application/vnd.api+json"
         }
+
+        # this is only for ignore/unignore for some reason
         self.v1_headers = {
+            "User-Agent": "DefectDojo",
             "Authorization": f"Token {tool_config.api_key}",
             "Content-Type": "application/json"
         }
 
         self.snyk_api_url = tool_config.url.rstrip("/")
 
-        self.org_to_id_mapping_cache = {}
+        self.org_id_to_name_mapping_cache = {}
 
         logger.debug(f"Snyk API URL configured as: {self.snyk_api_url}")
 
-
-    # TODO - find a way how to run this only once
     def get_id_to_org_mapping(self):
-        if not self.org_to_id_mapping_cache:
+        if not self.org_id_to_name_mapping_cache:
+            logger.debug("Fetching organization ID to name mapping from Snyk API")
             response = requests.get(f"{self.snyk_api_url}/rest/orgs?version={snyk_api_version}", headers=self.default_headers)
             response.raise_for_status()
-            self.org_to_id_mapping_cache = {item["id"]: item["attributes"]["slug"] for item in response.json()["data"]}
+            self.org_id_to_name_mapping_cache = {item["id"]: item["attributes"]["slug"] for item in response.json()["data"]}
 
-        return self.org_to_id_mapping_cache
+        return self.org_id_to_name_mapping_cache
 
     def get_organizations(self):
         """
@@ -121,29 +130,6 @@ class SnykAPI:
         logger.info(f"Retrieved {projects_data} projects for organization {org_id}")
         return projects_data
 
-    def get_project(self, org_id, project_id):
-        """
-        Get details of a specific project.
-        """
-        logger.debug(f"Fetching project details for ID: {project_id} in organization: {org_id}")
-        response = self.session.get(
-            url=f"{self.snyk_api_url}/rest/org/{org_id}/project/{project_id}",
-            headers=self.default_headers,
-            timeout=settings.REQUESTS_TIMEOUT,
-        )
-
-        if not response.ok:
-            logger.error(f"Failed to get project {project_id}: {response.status_code} - {response.content.decode('utf-8')}")
-            msg = (
-                f"Unable to get project {project_id} in organization {org_id} "
-                f'due to {response.status_code} - {response.content.decode("utf-8")}'
-            )
-            raise Exception(msg)
-
-        project_data = response.json()
-        logger.debug(f"Retrieved project: {project_data.get('name', project_id) if project_data else 'None'}")
-        return project_data
-
     def get_issues(self, org_id, project_id=None):
         """
         Get issues for an organization or specific project.
@@ -177,7 +163,6 @@ class SnykAPI:
             else:
                 break
 
-
         scope = f"project {project_id}" if project_id else f"organization {org_id}"
         logger.info(f"Retrieved {len(issues_data)} issues for {scope}")
         logger.debug(f"Issue types: {list(set(issue.get('type', 'unknown') for issue in issues_data))}")
@@ -207,9 +192,6 @@ class SnykAPI:
         return issue_data
 
     def ignore_issue(self, org_name, project_id, issue_name, reason, notes=""):
-        """
-        Ignore an issue (mark as false positive or won't fix).
-        """
         logger.debug(f"Ignoring issue {issue_name} with reason: {reason} and notes: {notes}")
         data = {
             "reasonType": reason,
@@ -219,8 +201,6 @@ class SnykAPI:
         }
 
         # TODO DIMI - also different endpint than default one, with different headers
-
-
         response = self.session.post(
             url=f"https://snyk.io/api/v1/org/{org_name}/project/{project_id}/ignore/{issue_name}",
             headers=self.v1_headers,
@@ -239,10 +219,8 @@ class SnykAPI:
         logger.info(f"Successfully ignored issue {issue_name} with reason: {reason}")
 
     def unignore_issue(self, org_name, project_id, issue_name):
-        """
-        Unignore an issue.
-        """
         logger.debug(f"Unignoring issue {issue_name}")
+
         # TODO DIMI - also different endpint than default one, with different headers
         response = self.session.delete(
             url=f"https://snyk.io/api/v1/org/{org_name}/project/{project_id}/ignore/{issue_name}",
@@ -261,7 +239,7 @@ class SnykAPI:
         logger.info(f"Successfully unignored issue {issue_name}")
 
     def test_connection(self):
-        """Returns user information or raise error."""
+        """Test conection for new Tool Configuration."""
         logger.debug("Testing Snyk API connection")
         response = self.session.get(
             url=f"{self.snyk_api_url}/rest/self?version={snyk_api_version}",
@@ -292,8 +270,8 @@ class SnykAPI:
             raise Exception(msg)
         return f"Successfully connected to Snyk as user: {username}"
 
-    # Product -> Api Scan configuration
     def test_product_connection(self, api_scan_configuration):
+        """Test conection for new Product -> API scan configuration."""
         org_id = api_scan_configuration.service_key_1
         project_id = api_scan_configuration.service_key_2 or None
 
