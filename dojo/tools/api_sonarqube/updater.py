@@ -52,6 +52,40 @@ class SonarQubeApiUpdater:
         },
     ]
 
+    MAPPING_SONARQUBE_HOTSPOT_STATUS_TRANSITION = [
+        {
+            "from": ["TO_REVIEW"],
+            "to": "RESOLVED / FALSE-POSITIVE",
+            "transition": "REVIEWED",
+            "resolution" : "SAFE"
+        },
+        {
+            "from": ["TO_REVIEW"],
+            "to": "RESOLVED / FIXED",
+            "transition": "REVIEWED",
+            "resolution" : "FIXED"
+        },
+                {
+            "from": ["TO_REVIEW"],
+            "to": "RESOLVED / WONTFIX",
+            "transition": "REVIEWED",
+            "resolution" : "ACKNOWLEDGED"
+        },
+        {
+            "from": ["REVIEWED"],
+            "to": "OPEN",
+            "transition": "TO_REVIEW",
+            "resolution" : None
+        },
+        {
+            "from": ["REVIEWED"],
+            "to": "REOPEN",
+            "transition": "TO_REVIEW",
+            "resolution" : None
+        },
+
+    ]
+
     @staticmethod
     def get_sonarqube_status_for(finding):
         target_status = None
@@ -65,17 +99,28 @@ class SonarQubeApiUpdater:
             target_status = "CONFIRMED" if finding.verified else "REOPENED"
         return target_status
 
+    @staticmethod
+    def get_sonarqube_status_for_hotspot(finding):
+        return "TO_REVIEW" if finding.active else "REVIEWED"
+
     def get_sonarqube_required_transitions_for(
-        self, current_status, target_status,
+        self, current_status, target_status, is_hotspot=False
     ):
         # If current and target is the same... do nothing
         if current_status == target_status:
             return None
 
+        # Select the appropriate mapping based on issue type
+        mapping = (
+            self.MAPPING_SONARQUBE_HOTSPOT_STATUS_TRANSITION
+            if is_hotspot
+            else self.MAPPING_SONARQUBE_STATUS_TRANSITION
+        )
+
         # Check if there is at least one transition from current_status...
         if not [
             x
-            for x in self.MAPPING_SONARQUBE_STATUS_TRANSITION
+            for x in mapping
             if current_status in x.get("from")
         ]:
             return None
@@ -84,7 +129,7 @@ class SonarQubeApiUpdater:
         # can transition to target_status
         transitions = [
             x
-            for x in self.MAPPING_SONARQUBE_STATUS_TRANSITION
+            for x in mapping
             if target_status == x.get("to")
         ]
         if transitions:
@@ -92,26 +137,39 @@ class SonarQubeApiUpdater:
                 # There is a direct transition from current status...
                 if current_status in transition.get("from"):
                     t = transition.get("transition")
-                    return [t] if t else None
+                    if is_hotspot:
+                        return [{"status": t, "resolution": transition.get("resolution")}] if t else None
+                    else:
+                        return [t] if t else None
 
-            # We have the last transition to get to our target status but there
-            # is no direct transition
-            transitions_result = deque()
-            transitions_result.appendleft(transitions[0].get("transition"))
+            # Handle complex transitions for regular issues
+            if not is_hotspot:
+                # We have the last transition to get to our target status but there
+                # is no direct transition
+                transitions_result = deque()
+                transitions_result.appendleft(transitions[0].get("transition"))
 
-            # Find out previous transitions that would finish in any FROM of a
-            # previous to use as target
-            for transition in transitions:
-                for t_from in transition.get("from"):
-                    possible_transition = (
-                        self.get_sonarqube_required_transitions_for(
-                            current_status, t_from,
+                # Find out previous transitions that would finish in any FROM of a
+                # previous to use as target
+                for transition in transitions:
+                    for t_from in transition.get("from"):
+                        possible_transition = (
+                            self.get_sonarqube_required_transitions_for(
+                                current_status, t_from, is_hotspot
+                            )
                         )
-                    )
-                    if possible_transition:
-                        transitions_result.extendleft(possible_transition)
-                        return list(transitions_result)
-            return None
+                        if possible_transition:
+                            transitions_result.extendleft(possible_transition)
+                            return list(transitions_result)
+            else:
+                # SQ code is too complicated for ISSUES, there is no such thing for HOTSPOTS,
+                # there are only 2 states: TO_REVIEW and REVIEWED
+                transitions_result = deque()
+                transitions_result.appendleft(
+                    {"status": transitions[0].get("transition"),
+                    "resolution": transitions[0].get("resolution")}
+                )
+                return list(transitions_result)
         return None
 
     def update_sonarqube_finding(self, finding):
@@ -127,45 +185,91 @@ class SonarQubeApiUpdater:
         # we don't care about config, each finding knows which config was used
         # during import
 
-        target_status = self.get_sonarqube_status_for(finding)
+        type = sonarqube_issue.type
 
-        issue = client.get_issue(sonarqube_issue.key)
-        if (
-            issue
-        ):  # Issue could have disappeared in SQ because a previous scan has resolved the issue as fixed
-            if issue.get("resolution"):
-                current_status = "{} / {}".format(
-                    issue.get("status"), issue.get("resolution"),
-                )
-            else:
-                current_status = issue.get("status")
+        if type == "SECURITY_HOTSPOT":
+            target_status = self.get_sonarqube_status_for_hotspot(finding)
+            hotspot = client.get_hotspot(sonarqube_issue.key)
 
-            logger.debug(
-                f"--> SQ Current status: {current_status}. Current target status: {target_status}",
-            )
-
-            transitions = self.get_sonarqube_required_transitions_for(
-                current_status, target_status,
-            )
-            if transitions:
-                logger.info(
-                    f"Updating finding '{finding}' in SonarQube",
+            if not hotspot:
+                logger.debug(
+                    f"--> No hotspot found in SonarQube with key {sonarqube_issue.key}",
                 )
 
-                for transition in transitions:
-                    client.transition_issue(sonarqube_issue.key, transition)
+            current_status = hotspot.get("status")
 
-                # Track Defect Dojo has updated the SonarQube issue
-                Sonarqube_Issue_Transition.objects.create(
-                    sonarqube_issue=finding.sonarqube_issue,
-                    # not sure if this is needed, but looks like the original author decided to send display status
-                    # to sonarqube we changed Accepted into Risk Accepted, but we change it back to be sure we don't
-                    # break the integration
-                    finding_status=finding.status().replace(
-                        "Risk Accepted", "Accepted",
+            if current_status != target_status:
+                logger.debug(
+                    f"--> Need to transition from {current_status} to {target_status}",
+                )
+
+                transitions = self.get_sonarqube_required_transitions_for(
+                    current_status, target_status, is_hotspot=True
+                )
+                if transitions:
+                    logger.info(
+                        f"Updating finding '{finding}' in SonarQube",
                     )
-                    if finding.status()
-                    else finding.status(),
-                    sonarqube_status=current_status,
-                    transitions=",".join(transitions),
+
+                    for transition in transitions:
+                        client.transition_hotspot(sonarqube_issue.key,
+                                                    status=transition["status"],
+                                                    resolution=transition["resolution"])
+
+                    # Track Defect Dojo has updated the SonarQube issue
+                    Sonarqube_Issue_Transition.objects.create(
+                        sonarqube_issue=finding.sonarqube_issue,
+                        # not sure if this is needed, but looks like the original author decided to send display status
+                        # to sonarqube we changed Accepted into Risk Accepted, but we change it back to be sure we don't
+                        # break the integration
+                        finding_status=finding.status().replace(
+                            "Risk Accepted", "Accepted",
+                        )
+                        if finding.status()
+                        else finding.status(),
+                        sonarqube_status=current_status,
+                        transitions=",".join(transitions["status"] for transitions in transitions),
+                    )
+
+        else:
+            target_status = self.get_sonarqube_status_for(finding)
+            issue = client.get_issue(sonarqube_issue.key)
+            if (
+                issue
+            ):  # Issue could have disappeared in SQ because a previous scan has resolved the issue as fixed
+                if issue.get("resolution"):
+                    current_status = "{} / {}".format(
+                        issue.get("status"), issue.get("resolution"),
+                    )
+                else:
+                    current_status = issue.get("status")
+
+                logger.debug(
+                    f"--> SQ Current status: {current_status}. Current target status: {target_status}",
                 )
+
+                transitions = self.get_sonarqube_required_transitions_for(
+                    current_status, target_status, is_hotspot=False
+                )
+                if transitions:
+                    logger.info(
+                        f"Updating finding '{finding}' in SonarQube",
+                    )
+
+                    for transition in transitions:
+                        client.transition_issue(sonarqube_issue.key, transition)
+
+                    # Track Defect Dojo has updated the SonarQube issue
+                    Sonarqube_Issue_Transition.objects.create(
+                        sonarqube_issue=finding.sonarqube_issue,
+                        # not sure if this is needed, but looks like the original author decided to send display status
+                        # to sonarqube we changed Accepted into Risk Accepted, but we change it back to be sure we don't
+                        # break the integration
+                        finding_status=finding.status().replace(
+                            "Risk Accepted", "Accepted",
+                        )
+                        if finding.status()
+                        else finding.status(),
+                        sonarqube_status=current_status,
+                        transitions=",".join(transitions),
+                    )
