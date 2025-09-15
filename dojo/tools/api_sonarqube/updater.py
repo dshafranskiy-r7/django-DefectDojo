@@ -79,11 +79,16 @@ class SonarQubeApiUpdater:
         },
         {
             "from": ["REVIEWED"],
-            "to": "REOPEN",
+            "to": "REOPENED",
             "transition": "TO_REVIEW",
             "resolution" : None
         },
-
+        {
+            "from": ["REVIEWED"],
+            "to": "CONFIRMED",
+            "transition": "TO_REVIEW",
+            "resolution" : None
+        },
     ]
 
     @staticmethod
@@ -98,10 +103,6 @@ class SonarQubeApiUpdater:
         elif finding.active:
             target_status = "CONFIRMED" if finding.verified else "REOPENED"
         return target_status
-
-    @staticmethod
-    def get_sonarqube_status_for_hotspot(finding):
-        return "TO_REVIEW" if finding.active else "REVIEWED"
 
     def get_sonarqube_required_transitions_for(
         self, current_status, target_status, is_hotspot=False
@@ -186,9 +187,9 @@ class SonarQubeApiUpdater:
         # during import
 
         type = sonarqube_issue.type
+        target_status = self.get_sonarqube_status_for(finding)
 
         if type == "SECURITY_HOTSPOT":
-            target_status = self.get_sonarqube_status_for_hotspot(finding)
             hotspot = client.get_hotspot(sonarqube_issue.key)
 
             if not hotspot:
@@ -232,7 +233,6 @@ class SonarQubeApiUpdater:
                     )
 
         else:
-            target_status = self.get_sonarqube_status_for(finding)
             issue = client.get_issue(sonarqube_issue.key)
             if (
                 issue
