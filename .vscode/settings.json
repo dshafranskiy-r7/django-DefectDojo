@@ -1,0 +1,9 @@
+{
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true,
+    "python.defaultInterpreterPath": "django-DefectDojo/venv/bin/python3",
+    "python.testing.unittestArgs": [
+      "unittests/tools",
+  ]
+  // For some reason I had to install reqs via "venv/bin/python3 -m pip install -r requirements.txt"
+}
