@@ -20,7 +20,7 @@
         },
         {
 
-            "name": "DD (Local Tests)",
+            "name": "DD (Container Tests)",
             "type": "python",
             "request": "attach",
             "port": 5679,
@@ -35,7 +35,21 @@
             "django": true,
             "redirectOutput": true
         },
-                {
+        {
+            "name": "DD (Local Tests)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/manage.py",
+            "args": [
+                "test",
+                "unittests.tools.test_api_snyk_importer",  // <=== your test label
+                "--keepdb"
+            ],
+            "django": true,
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
 
             "name": "DD (Celery Worker)",
             "type": "python",
