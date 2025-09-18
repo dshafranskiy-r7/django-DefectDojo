@@ -1,0 +1,123 @@
+{
+    "id": "10edba93-ee9d-4ef7-843a-77d1dad6c843",
+    "type": "issue",
+    "attributes": {
+        "classes": [
+            {
+                "id": "CWE-502",
+                "source": "CWE",
+                "type": "weakness"
+            }
+        ],
+        "coordinates": [
+            {
+                "is_fixable_manually": false,
+                "is_fixable_snyk": true,
+                "is_fixable_upstream": false,
+                "is_patchable": false,
+                "is_pinnable": false,
+                "is_upgradeable": true,
+                "reachability": "not-applicable",
+                "representations": [
+                    {
+                        "dependency": {
+                            "package_name": "com.fasterxml.jackson.core:jackson-databind",
+                            "package_version": "2.8.9"
+                        }
+                    }
+                ]
+            }
+        ],
+        "created_at": "2025-09-08T11:23:04.322Z",
+        "effective_severity_level": "high",
+        "exploit_details": {
+            "maturity_levels": [
+                {
+                    "format": "CVSSv3",
+                    "level": "Not Defined"
+                },
+                {
+                    "format": "CVSSv4",
+                    "level": "Proof of Concept"
+                }
+            ],
+            "sources": [
+                "Snyk"
+            ]
+        },
+        "ignored": false,
+        "key": "SNYK-JAVA-COMFASTERXMLJACKSONCORE-1056417",
+        "problems": [
+            {
+                "id": "CVE-2020-36186",
+                "source": "NVD",
+                "type": "vulnerability",
+                "updated_at": "2025-09-08T11:23:06.266252Z",
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2020-36186"
+            },
+            {
+                "id": "SNYK-JAVA-COMFASTERXMLJACKSONCORE-1056417",
+                "source": "SNYK",
+                "type": "vulnerability",
+                "updated_at": "2025-09-08T11:23:06.266251Z"
+            }
+        ],
+        "risk": {
+            "factors": [],
+            "score": {
+                "model": "v1",
+                "value": 225
+            }
+        },
+        "severities": [
+            {
+                "level": "high",
+                "modification_time": "2024-03-06T13:59:37.214Z",
+                "score": 8.1,
+                "source": "Snyk",
+                "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H/E:U/RL:U/RC:C",
+                "version": "3.1"
+            },
+            {
+                "level": "high",
+                "modification_time": "2024-03-11T09:51:24.695Z",
+                "score": 8.1,
+                "source": "NVD",
+                "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                "version": "3.1"
+            },
+            {
+                "level": "high",
+                "modification_time": "2024-03-11T09:51:23.757Z",
+                "score": 8.1,
+                "source": "Red Hat",
+                "vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                "version": "3.1"
+            }
+        ],
+        "status": "open",
+        "title": "Deserialization of Untrusted Data",
+        "type": "package_vulnerability",
+        "updated_at": "2025-09-08T11:23:04.322Z"
+    },
+    "relationships": {
+        "organization": {
+            "data": {
+                "id": "3de2b524-eae7-4f3f-ba5f-1a07e1df44c2",
+                "type": "organization"
+            },
+            "links": {
+                "related": "/orgs/3de2b524-eae7-4f3f-ba5f-1a07e1df44c2"
+            }
+        },
+        "scan_item": {
+            "data": {
+                "id": "bd740131-a87d-4dca-bd66-b3f0cf346b6c",
+                "type": "project"
+            },
+            "links": {
+                "related": "/orgs/3de2b524-eae7-4f3f-ba5f-1a07e1df44c2/projects/bd740131-a87d-4dca-bd66-b3f0cf346b6c"
+            }
+        }
+    }
+}
