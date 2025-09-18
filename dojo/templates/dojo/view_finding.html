@@ -1151,8 +1151,6 @@
         {% endif %}
     </div>
 
-    {% include "dojo/snippets/snyk_history.html" with finding=finding only %}
-
     {% include "dojo/snippets/sonarqube_history.html" with finding=finding only %}
 
     {% include "dojo/snippets/comments.html" with notes=notes object=finding destination="finding" %}
@@ -1212,7 +1210,7 @@
                 var i = $($(this).find('i').get(0));
                 i.toggleClass('glyphicon-chevron-up').toggleClass('glyphicon-chevron-down');
             })
-
+            
             // Configure tooltips for CVSS vectors - try multiple approaches
             $(document).on('shown.bs.tooltip shown.bs.popover', function() {
                 $('.tooltip-inner, .popover-content').css({
@@ -1224,7 +1222,7 @@
                     'max-width': '1200px !important'
                 });
             });
-
+            
             // Force tooltip configuration
             $('.has-popover').each(function() {
                 $(this).on('mouseenter', function() {
