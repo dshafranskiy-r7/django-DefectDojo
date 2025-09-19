@@ -72,6 +72,8 @@ class ImportReimportMixin:
         self.gitlab_dep_scan_components_filename = get_unit_tests_scans_path("gitlab_dep_scan") / "gl-dependency-scanning-report-many-vuln_v15.json"
         self.scan_type_gtlab_dep_scan = "GitLab Dependency Scanning Report"
 
+        # TODO DIMI - add Snyk
+
         self.sonarqube_file_name1 = get_unit_tests_scans_path("sonarqube") / "sonar-6-findings.html"
         self.sonarqube_file_name2 = get_unit_tests_scans_path("sonarqube") / "sonar-6-findings-1-unique_id_changed.html"
         self.scan_type_sonarqube_detailed = "SonarQube Scan detailed"

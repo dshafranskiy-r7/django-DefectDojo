@@ -71,6 +71,7 @@ from dojo.api_v2.views import (
     QuestionnaireQuestionViewSet,
     RiskAcceptanceViewSet,
     RoleViewSet,
+    SnykIssueViewSet,
     SonarqubeIssueViewSet,
     StubFindingsViewSet,
     TestsViewSet,

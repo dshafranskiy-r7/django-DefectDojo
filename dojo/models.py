@@ -2086,6 +2086,25 @@ class Development_Environment(models.Model):
         return [{"title": str(self),
                  "url": reverse("edit_dev_env", args=(self.id,))}]
 
+class Snyk_Issue(models.Model):
+    key = models.CharField(max_length=60, unique=True, help_text=_("Snyk issue key"))
+    status = models.CharField(max_length=20, help_text=_("Snyk issue status"))
+    # Size==25, due to 'package_vulnerability' == 21 character
+    type = models.CharField(max_length=25, help_text=_("Snyk issue type"))
+
+    def __str__(self):
+        return self.key
+
+
+class Snyk_Issue_Transition(models.Model):
+    snyk_issue = models.ForeignKey(Snyk_Issue, on_delete=models.CASCADE, db_index=True)
+    created = models.DateTimeField(auto_now_add=True, null=False)
+    finding_status = models.CharField(max_length=100)
+    snyk_status = models.CharField(max_length=50)
+    transitions = models.CharField(max_length=100)
+
+    class Meta:
+        ordering = ("-created", )
 
 class Sonarqube_Issue(models.Model):
     key = models.CharField(max_length=60, unique=True, help_text=_("SonarQube issue key"))
@@ -2105,7 +2124,6 @@ class Sonarqube_Issue_Transition(models.Model):
 
     class Meta:
         ordering = ("-created", )
-
 
 class Test(models.Model):
     engagement = models.ForeignKey(Engagement, editable=False, on_delete=models.CASCADE)
@@ -2614,6 +2632,12 @@ class Finding(models.Model):
                                         help_text=_("The SonarQube issue associated with this finding."),
                                         verbose_name=_("SonarQube issue"),
                                         on_delete=models.CASCADE)
+    snyk_issue = models.ForeignKey(Snyk_Issue,
+                                   null=True,
+                                   blank=True,
+                                   help_text=_("The Snyk issue associated with this finding."),
+                                   verbose_name=_("Snyk issue"),
+                                   on_delete=models.CASCADE)
     unique_id_from_tool = models.CharField(null=True,
                                            blank=True,
                                            max_length=500,
@@ -4793,6 +4817,10 @@ admin.site.register(Regulation)
 admin.site.register(Global_Role)
 admin.site.register(Role)
 admin.site.register(Dojo_Group)
+
+# Snyk Integration
+admin.site.register(Snyk_Issue)
+admin.site.register(Snyk_Issue_Transition)
 
 # SonarQube Integration
 admin.site.register(Sonarqube_Issue)

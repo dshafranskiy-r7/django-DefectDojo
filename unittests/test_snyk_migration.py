@@ -4,7 +4,8 @@ from django_test_migrations.contrib.unittest_case import MigratorTestCase
 
 class TestSnykMigration(MigratorTestCase):
     """Test that Snyk migration 0241 runs successfully and creates expected models."""
-    
+
+    # TODO DIMI - correct numbers
     migrate_from = ("dojo", "0240_jira_instance_password_help_text_fix")
     migrate_to = ("dojo", "0241_snyk_issue_finding_snyk_issue_snyk_issue_transition")
 

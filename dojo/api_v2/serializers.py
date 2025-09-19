@@ -94,6 +94,8 @@ from dojo.models import (
     Risk_Acceptance,
     Role,
     SLA_Configuration,
+    Snyk_Issue,
+    Snyk_Issue_Transition,
     Sonarqube_Issue,
     Sonarqube_Issue_Transition,
     Stub_Finding,
@@ -1378,6 +1380,16 @@ class JIRAProjectSerializer(serializers.ModelSerializer):
 
         return data
 
+class SnykIssueSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Snyk_Issue
+        fields = "__all__"
+
+
+class SnykIssueTransitionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Snyk_Issue_Transition
+        fields = "__all__"
 
 class SonarqubeIssueSerializer(serializers.ModelSerializer):
     class Meta:
