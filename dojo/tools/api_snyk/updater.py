@@ -17,6 +17,49 @@ class SnykApiUpdater:
     in future imports of Snyk Scanner.
     """
 
+    MAPPING_SNYK_STATUS_TRANSITION = [
+        {
+            "from": ["OPEN", "REOPENED"],
+            "to": "REOPENED",
+            "transition": None
+        },
+        {
+            "from": ["OPEN", "REOPENED"],
+            "to": "CONFIRMED",
+            "transition": "confirm",
+        },
+        {
+            "from": ["CONFIRMED"],
+            "to": "REOPENED",
+            "transition": "unconfirm"
+        },
+        {
+            "from": ["OPEN", "REOPENED", "CONFIRMED"],
+            "to": "RESOLVED / FIXED",
+            "transition": "resolve",
+        },
+        {
+            "from": ["OPEN", "REOPENED", "CONFIRMED"],
+            "to": "RESOLVED / WONTFIX",
+            "transition": "wontfix",
+        },
+        {
+            "from": ["OPEN", "REOPENED", "CONFIRMED"],
+            "to": "RESOLVED / FALSE-POSITIVE",
+            "transition": "falsepositive",
+        },
+        {
+            "from": [
+                "RESOLVED / FIXED",
+                "RESOLVED / WONTFIX",
+                "RESOLVED / FALSE-POSITIVE",
+            ],
+            "to": "REOPENED",
+            "transition": "reopen",
+        },
+    ]
+
+
     @staticmethod
     def get_snyk_status_for(finding):
         target_status = None
